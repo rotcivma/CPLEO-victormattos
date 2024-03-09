@@ -1,0 +1,84 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Sockets;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+
+public class PortScanFunction
+{
+    private static readonly Dictionary<int, string> _serviceMap = new Dictionary<int, string>()
+    {
+        { 22, "SSH" },
+        { 80, "HTTP" },
+        { 443, "HTTPS" },
+        { 8080, "HTTP Alt" }
+        // Adicione mais portas e serviços conforme necessário
+    };
+
+    [Function("PortScanFunction")]
+    public static async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestData req,
+                                                    FunctionContext context)
+    {
+        var response = req.CreateResponse();
+
+        // Validar o host
+        var host = req.Query["host"];
+        if (string.IsNullOrEmpty(host))
+        {
+            response.StatusCode = 400;
+            response.WriteString("O parâmetro 'host' é obrigatório.");
+            return response;
+        }
+
+        var ports = new List<int> { 22, 80, 443, 8080 }; // Adicione as portas que deseja verificar aqui
+
+        var result = new List<PortScanResult>();
+
+        foreach (var port in ports)
+        {
+            var portScanResult = new PortScanResult
+            {
+                Port = port,
+                IsOpen = await IsPortOpenAsync(host, port),
+                Service = GetService(port)
+            };
+
+            result.Add(portScanResult);
+        }
+
+        var jsonResult = JsonSerializer.Serialize(result);
+        response.Headers.Add("Content-Type", "application/json");
+        response.WriteString(jsonResult);
+        return response;
+    }
+
+    private static async Task<bool> IsPortOpenAsync(string host, int port)
+    {
+        try
+        {
+            using (var tcpClient = new TcpClient())
+            {
+                await tcpClient.ConnectAsync(host, port);
+                return true;
+            }
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+    }
+
+    private static string GetService(int port)
+    {
+        return _serviceMap.TryGetValue(port, out string service) ? service : "Unknown";
+    }
+}
+
+public class PortScanResult
+{
+    public int Port { get; set; }
+    public bool IsOpen { get; set; }
+    public string Service { get; set; }
+}
