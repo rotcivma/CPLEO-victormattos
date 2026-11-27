@@ -1,5 +1,7 @@
 using System;
+using Propulsor.Core;
 using Propulsor.Core.Gameplay;
+using Propulsor.Core.Save;
 using Propulsor.Data;
 using Propulsor.Gameplay;
 using Propulsor.UI;
@@ -29,13 +31,25 @@ namespace Propulsor.Bootstrap
         /// <summary>
         /// Jogo completo: corrida + fluxo de telas (splash → carregamento → menu → corrida → ...).
         /// </summary>
+        /// <param name="storage">Onde salvar o perfil (null = arquivo em Application.persistentDataPath).</param>
         public static FlowController BuildGame(IThrustInput input, PlayerPhysicsDef def = null,
-                                               Func<RunConfig> configFactory = null)
+                                               Func<RunConfig> configFactory = null, ISaveStorage storage = null)
         {
             var driver = Build(input, def, configFactory, debugHud: false);
             driver.DebugKeys = Application.isEditor || Debug.isDebugBuild;
+
+            var save = new SaveManager(storage ?? new FileSaveStorage(Application.persistentDataPath));
+            var services = new GameServices(driver.Bus, save);
+            if (save.LastOutcome == LoadOutcome.LoadedFromBackup)
+                Debug.LogWarning("Perfil principal corrompido; carregado da cópia de segurança. " + save.LastError);
+
             var flow = driver.gameObject.AddComponent<FlowController>();
-            flow.Bind(driver);
+            flow.Bind(driver, services);
+
+            var playerView = Object.FindAnyObjectByType<PlayerView>();
+            playerView.ApplyAppearance(services.Inventory);
+            flow.AppearanceChanged += () => playerView.ApplyAppearance(services.Inventory);
+
             new GameObject("Interface").AddComponent<UIManager>().Bind(flow);
             return flow;
         }

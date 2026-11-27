@@ -39,6 +39,9 @@ namespace Propulsor.Gameplay
 
         private IThrustInput _input;
         private Func<RunConfig> _configFactory;
+
+        /// <summary>Gera a configuração de cada nova corrida (gadgets, bônus...).</summary>
+        public Func<RunConfig> ConfigFactory { get => _configFactory; set => _configFactory = value; }
         private readonly FixedStepper _stepper = new FixedStepper(0.02f);
         private Vector2 _prev, _curr;
         private bool _pressedLatch;

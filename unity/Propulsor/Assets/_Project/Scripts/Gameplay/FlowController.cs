@@ -1,52 +1,68 @@
+using System;
+using Propulsor.Core;
+using Propulsor.Core.Economy;
 using Propulsor.Core.Events;
 using Propulsor.Core.Flow;
 using Propulsor.Core.Gameplay;
+using Propulsor.Core.Progress;
 using UnityEngine;
 
 namespace Propulsor.Gameplay
 {
     /// <summary>
-    /// Liga o <see cref="GameFlow"/> (lógica pura) à corrida (<see cref="RunDriver"/>):
-    /// decide quando a simulação avança, credita resultados no perfil, conduz a
-    /// Garra da Sorte e a oferta de revive. A UI só chama os métodos públicos.
+    /// Liga o <see cref="GameFlow"/> (lógica pura) à corrida (<see cref="RunDriver"/>) e aos
+    /// sistemas de meta-jogo (<see cref="GameServices"/>): decide quando a simulação avança,
+    /// encerra corridas (economia, missões, conquistas, salvamento), conduz a Garra da Sorte
+    /// e a oferta de revive. A UI só chama os métodos públicos.
     /// </summary>
     public sealed class FlowController : MonoBehaviour
     {
         public GameFlow Flow { get; private set; }
         public RunDriver Driver { get; private set; }
-        public SessionProfile Profile { get; private set; }
+        public GameServices Services { get; private set; }
+        public SessionProfile Profile => Services.Profile;
         public PopupQueue Popups { get; } = new PopupQueue();
         public ClawMachine Claw { get; private set; }
-        /// <summary>Resumo da última corrida (válido em Results).</summary>
-        public RunSummary LastSummary { get; private set; }
+        /// <summary>Relatório da última corrida (válido em Results).</summary>
+        public RunEndReport LastReport { get; private set; }
+        public RunSummary LastSummary => LastReport?.Summary ?? default;
+
+        /// <summary>Disparado quando o equipamento visual muda (a personagem se redesenha).</summary>
+        public event Action AppearanceChanged;
 
         private int _tokensFedToClaw;
         private bool _announcedBest;
-        private readonly XorShiftRandom _clawRng = new XorShiftRandom(System.Environment.TickCount);
 
-        public void Bind(RunDriver driver, SessionProfile profile = null)
+        public void Bind(RunDriver driver, GameServices services)
         {
             Driver = driver;
-            Profile = profile ?? new SessionProfile();
+            Services = services;
             Flow = new GameFlow(driver.Bus)
             {
                 RevivesAvailable = () => Profile.SecondChances,
-                ConsumeRevive = () => Profile.SecondChances--,
+                ConsumeRevive = () => { Services.Inventory.Consume(ItemIds.SecondChance); Services.Persist(); },
                 TokensAvailable = PrepareClawTokens,
                 RequestRevive = () => Driver.Sim.Revive(),
                 RequestNewRun = NewRun
             };
 
+            // Cada corrida nasce com os gadgets equipados e os bônus pendentes.
+            var baseFactory = driver.ConfigFactory;
+            driver.ConfigFactory = () => Services.BuildRunConfig(baseFactory != null ? baseFactory() : new RunConfig());
             driver.AutoRestart = false;
             driver.CanSimulate = () => Flow.SimulationRuns;
             driver.CanControl = () => Flow.PlayerControls;
+            driver.Restart();
 
             var bus = driver.Bus;
             bus.Subscribe<PlayerDied>(_ => Flow.PlayerDied());
             bus.Subscribe<PlayerStopped>(_ => Flow.PlayerStopped());
             bus.Subscribe<GameStateChanged>(OnStateChanged);
             bus.Subscribe<TokenCollected>(_ => Popups.Push("+1 ficha"));
-            bus.Subscribe<VehicleMounted>(e => Popups.Push(VehicleName(e.Kind)));
+            bus.Subscribe<VehicleMounted>(e => Popups.Push(VehicleNames.Get(e.Kind)));
+            bus.Subscribe<MissionCompleted>(e => Popups.Push($"✓ {e.Text} {new string('★', e.Stars)}"));
+            bus.Subscribe<AchievementUnlocked>(e => Popups.Push($"Conquista: {e.Name}"));
+            bus.Subscribe<HeadStartStarted>(_ => Popups.Push("ARRANCADA!"));
             bus.Subscribe<DistanceChanged>(e =>
             {
                 if (!_announcedBest && Profile.BestDistance > 0 && e.Meters > Profile.BestDistance)
@@ -64,8 +80,15 @@ namespace Propulsor.Gameplay
             Popups.Tick(Time.unscaledDeltaTime);
         }
 
-        private void OnApplicationPause(bool paused) { if (paused) Flow?.Pause(); }
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused) return;
+            Flow?.Pause();
+            Services?.Persist();
+        }
+
         private void OnApplicationFocus(bool focus) { if (!focus) Flow?.Pause(); }
+        private void OnApplicationQuit() => Services?.Persist();
 
         // ---------- comandos para a UI ----------
 
@@ -79,23 +102,51 @@ namespace Propulsor.Gameplay
         public void PlayAgain() => Flow.PlayAgain();
         public void BackToMenu() => Flow.BackToMenu();
 
-        /// <summary>Uma tentativa na Garra. A UI anima e depois chama <see cref="FinishClaw"/> se acabar.</summary>
+        /// <summary>Botão de Arrancada no HUD (só no começo da corrida).</summary>
+        public bool CanUseHeadStart =>
+            Flow.State == GameState.Running && Driver.Sim.Distance < 50f && !Driver.Sim.IsHeadStarting && Profile.HeadStarts > 0;
+
+        public void UseHeadStart()
+        {
+            if (CanUseHeadStart && Services.UseHeadStart(Driver.Sim)) Services.Persist();
+        }
+
         public PrizeEntry PlayClaw() => Claw.Play();
-
         public int CashOutClaw() => Claw.CashOut();
-
         public void FinishClaw(bool wonSecondChance) => Flow.ClawFinished(wonSecondChance);
+
+        public PurchaseResult Buy(string id)
+        {
+            var r = Services.Buy(id);
+            if (r == PurchaseResult.Ok) AppearanceChanged?.Invoke();
+            return r;
+        }
+
+        public EquipResult Equip(string id)
+        {
+            var r = Services.Equip(id);
+            AppearanceChanged?.Invoke();
+            return r;
+        }
+
+        public void Unequip(string id)
+        {
+            Services.Unequip(id);
+            AppearanceChanged?.Invoke();
+        }
+
+        public void ResetProgress()
+        {
+            Services.ResetProgress();
+            AppearanceChanged?.Invoke();
+        }
 
         // ---------- interno ----------
 
-        /// <summary>Fichas disponíveis para a Garra: as da corrida (ainda não usadas) + as guardadas.</summary>
+        /// <summary>Fichas para a Garra: as guardadas (na criação) + as da corrida ainda não usadas.</summary>
         private int PrepareClawTokens()
         {
-            if (Claw == null)
-            {
-                Claw = new ClawMachine(Profile.BankedTokens, _clawRng);
-                Profile.BankedTokens = 0;
-            }
+            if (Claw == null) Claw = Services.CreateClaw(Driver.Sim.Config);
             int runTokens = Driver.Sim.RunTokens;
             Claw.AddTokens(runTokens - _tokensFedToClaw);
             _tokensFedToClaw = runTokens;
@@ -104,17 +155,7 @@ namespace Propulsor.Gameplay
 
         private void OnStateChanged(GameStateChanged e)
         {
-            if (e.To != GameState.Results) return;
-
-            int clawCoins = 0;
-            if (Claw != null)
-            {
-                if (Claw.Tokens > 0) Claw.CashOut(); // fichas restantes viram porcas
-                clawCoins = Claw.TakeCoins();
-                Profile.PendingHeadStart |= Claw.HeadStartWon;
-                Profile.PendingDoubleCoins |= Claw.DoubleCoinsWon;
-            }
-            LastSummary = Profile.ApplyRun(Driver.Sim.Distance, Driver.Sim.RunCoins, clawCoins);
+            if (e.To == GameState.Results) LastReport = Services.EndRun(Driver.Sim, Claw);
         }
 
         private void NewRun()
@@ -125,18 +166,5 @@ namespace Propulsor.Gameplay
             _announcedBest = false;
             Popups.Clear();
         }
-
-        public static string VehicleName(Core.Gameplay.Vehicles.VehicleKind k) => k switch
-        {
-            Core.Gameplay.Vehicles.VehicleKind.Mech => "Mecha Pisão",
-            Core.Gameplay.Vehicles.VehicleKind.FlapDrone => "Drone-Asa",
-            Core.Gameplay.Vehicles.VehicleKind.BlinkPod => "Cápsula Blink",
-            Core.Gameplay.Vehicles.VehicleKind.RailBike => "Moto-Trilho",
-            Core.Gameplay.Vehicles.VehicleKind.SkySerpent => "Serpente-Céu",
-            Core.Gameplay.Vehicles.VehicleKind.FlipSuit => "Traje Inverso",
-            Core.Gameplay.Vehicles.VehicleKind.SplashSki => "Jet-Esqui",
-            Core.Gameplay.Vehicles.VehicleKind.HeavyRig => "Guindaste Blindado",
-            _ => k.ToString()
-        };
     }
 }

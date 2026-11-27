@@ -25,6 +25,9 @@ namespace Propulsor.UI
         public ClawScreen ClawScreen { get; } = new ClawScreen();
         public ResultsScreen Results { get; } = new ResultsScreen();
         public SettingsScreen Settings { get; } = new SettingsScreen();
+        public WorkshopScreen Workshop { get; } = new WorkshopScreen();
+        public MissionsScreen Missions { get; } = new MissionsScreen();
+        public AchievementsScreen AchievementsList { get; } = new AchievementsScreen();
         public ToastScreen Toast { get; } = new ToastScreen();
 
         private readonly List<UIScreen> _all = new List<UIScreen>();
@@ -57,6 +60,9 @@ namespace Propulsor.UI
             Add(Results, "Resultados");
             Add(Loading, "Carregamento");
             Add(Splash, "Splash");
+            Add(Workshop, "Oficina");
+            Add(Missions, "Missoes");
+            Add(AchievementsList, "Conquistas");
             Add(Settings, "Configuracoes");
             Add(Toast, "Aviso");
 
@@ -83,6 +89,12 @@ namespace Propulsor.UI
             Set(ClawScreen, state == GameState.ClawMachine);
             Set(Results, state == GameState.Results);
             if (state != GameState.MainMenu && state != GameState.Paused) Settings.Hide();
+            if (state != GameState.MainMenu && state != GameState.Results)
+            {
+                Workshop.Hide();
+                Missions.Hide();
+                AchievementsList.Hide();
+            }
         }
 
         private static void Set(UIScreen s, bool on) { if (on) s.Show(); else s.Hide(); }

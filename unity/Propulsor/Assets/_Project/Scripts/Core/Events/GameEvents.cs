@@ -90,4 +90,12 @@ namespace Propulsor.Core.Events
     }
 
     public readonly struct PlayerRevived { }
+
+    public readonly struct HeadStartStarted
+    {
+        public readonly float Meters;
+        public HeadStartStarted(float meters) { Meters = meters; }
+    }
+
+    public readonly struct HeadStartEnded { }
 }

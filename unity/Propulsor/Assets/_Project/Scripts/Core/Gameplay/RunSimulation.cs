@@ -30,6 +30,18 @@ namespace Propulsor.Core.Gameplay
         public float InvulnerableAfterArmorHit = 0.5f;
         public float EjectSpeed = 8f;
         public float PickupRadius = 0.35f;
+
+        // ---- efeitos de gadgets / bônus (Fase 8) ----
+        /// <summary>Quique ao pousar (velocidade vertical; 0 = sem botas de mola).</summary>
+        public float LandingBounceSpeed = 0f;
+        /// <summary>Alcance do robô coletor à frente (u; 0 = sem ajudante). Pega porcas abaixo de 1,6 u.</summary>
+        public float HelperRange = 0f;
+        /// <summary>Repassado à Garra da Sorte.</summary>
+        public bool LuckyLastToken = false;
+        /// <summary>Arrancada automática no início (m; 0 = nenhuma).</summary>
+        public float HeadStartMeters = 0f;
+        public float HeadStartSpeedMultiplier = 4f;
+        public float HeadStartCruiseY = 3f;
     }
 
     /// <summary>Trecho posicionado no mundo.</summary>
@@ -68,6 +80,9 @@ namespace Propulsor.Core.Gameplay
         public int RunTokens { get; private set; }
         public float InvulnerableTime { get; private set; }
         public HazardType? DeathCause { get; private set; }
+        /// <summary>Metros restantes de arrancada (0 = nenhuma ativa).</summary>
+        public float HeadStartRemaining { get; private set; }
+        public bool IsHeadStarting => HeadStartRemaining > 0f;
 
         public IReadOnlyList<PlacedSegment> Segments => _segments;
         public IReadOnlyList<Pickup> Pickups => _pickups;
@@ -90,6 +105,7 @@ namespace Propulsor.Core.Gameplay
         private float _nextVehicleTokenAt, _nextTokenAt;
         private int _nextId = 1;
         private float _lastMeters = -1f;
+        private bool _landedThisStep;
 
         public RunSimulation(RunConfig config, int seed, EventBus bus = null)
         {
@@ -103,7 +119,7 @@ namespace Propulsor.Core.Gameplay
             _missiles.WarningStarted = m => Bus.Publish(new MissileWarning(m.Id));
             _missiles.Launch = m => Bus.Publish(new MissileLaunched(m.Id));
 
-            Motor.Landed += () => Bus.Publish(new PlayerLanded());
+            Motor.Landed += () => { _landedThisStep = true; Bus.Publish(new PlayerLanded()); };
             Motor.StateChanged += (from, to) => Bus.Publish(new PlayerStateChanged(from, to));
             Motor.Stopped += () => Bus.Publish(new PlayerStopped(Motor.Distance));
 
@@ -112,6 +128,18 @@ namespace Propulsor.Core.Gameplay
             _nextTokenAt = _rng.Range(config.TokenMin, config.TokenMax);
             StreamWorld();
             Bus.Publish(new RunStarted(seed));
+            if (config.HeadStartMeters > 0f) StartHeadStart(config.HeadStartMeters);
+        }
+
+        /// <summary>
+        /// Arrancada: dispara em velocidade alta, a meia altura e invulnerável, até cobrir
+        /// <paramref name="meters"/>; depois fica 1 s invulnerável.
+        /// </summary>
+        public void StartHeadStart(float meters)
+        {
+            if (IsDead || meters <= 0f) return;
+            HeadStartRemaining = Math.Max(HeadStartRemaining, meters);
+            Bus.Publish(new HeadStartStarted(meters));
         }
 
         /// <param name="held">botão pressionado neste passo</param>
@@ -129,7 +157,17 @@ namespace Propulsor.Core.Gameplay
                 return;
             }
 
-            if (Vehicle != null)
+            _landedThisStep = false;
+            if (IsHeadStarting)
+            {
+                Motor.AdvanceHorizontal(dt, Config.HeadStartSpeedMultiplier);
+                float y = Motor.Y + (Config.HeadStartCruiseY - Motor.Y) * Math.Min(1f, 5f * dt);
+                Motor.PlaceVertical(y, 0f);
+                HeadStartRemaining = Math.Max(0f, HeadStartRemaining - (Motor.X - prevX));
+                InvulnerableTime = Math.Max(InvulnerableTime, IsHeadStarting ? 0.1f : 1f);
+                if (!IsHeadStarting) Bus.Publish(new HeadStartEnded());
+            }
+            else if (Vehicle != null)
             {
                 Vehicle.Step(dt, held, pressed);
                 Motor.AdvanceHorizontal(dt, Vehicle.SpeedMultiplier);
@@ -137,6 +175,9 @@ namespace Propulsor.Core.Gameplay
             else
             {
                 Motor.Step(dt, held);
+                // Botas de mola: quica ao pousar (se não estiver segurando o botão).
+                if (_landedThisStep && Config.LandingBounceSpeed > 0f && !held)
+                    Motor.PlaceVertical(Motor.Y, Config.LandingBounceSpeed);
             }
 
             StreamWorld();
@@ -145,7 +186,7 @@ namespace Propulsor.Core.Gameplay
             _missiles.FollowWorld(Motor.X - prevX);
             if (Config.MissilesEnabled)
             {
-                bool blocked = ActiveLaser != null || (Vehicle != null && Vehicle.BlocksMissiles);
+                bool blocked = ActiveLaser != null || IsHeadStarting || (Vehicle != null && Vehicle.BlocksMissiles);
                 var box = PlayerBox;
                 _missiles.Step(dt, Distance, Motor.X, box.CenterY, blocked);
             }
@@ -277,7 +318,9 @@ namespace Propulsor.Core.Gameplay
                     }
                 }
 
-                if (box.DistanceTo(p.X, p.Y) > Config.PickupRadius) continue;
+                bool helperGrabs = Config.HelperRange > 0f && p.Kind == PickupKind.Coin && p.Y < 1.6f &&
+                                   p.X >= box.MinX && p.X <= box.MaxX + Config.HelperRange;
+                if (!helperGrabs && box.DistanceTo(p.X, p.Y) > Config.PickupRadius) continue;
                 p.Collected = true;
                 switch (p.Kind)
                 {

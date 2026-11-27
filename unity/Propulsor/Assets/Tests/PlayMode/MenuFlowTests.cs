@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Propulsor.Bootstrap;
 using Propulsor.Core.Flow;
 using Propulsor.Core.Gameplay;
+using Propulsor.Core.Save;
 using Propulsor.Gameplay;
 using Propulsor.UI;
 using UnityEngine;
@@ -33,7 +34,8 @@ namespace Propulsor.Tests.PlayMode
         public void SetUp()
         {
             PrototypeBootstrap.AutoBuildEnabled = false;
-            _flow = PrototypeBootstrap.BuildGame(new NoInput(), null, Safe);
+            // Salvamento em memória: os testes nunca tocam no perfil real do jogador.
+            _flow = PrototypeBootstrap.BuildGame(new NoInput(), null, Safe, new MemorySaveStorage());
             _ui = Object.FindAnyObjectByType<UIManager>();
         }
 
@@ -106,11 +108,27 @@ namespace Propulsor.Tests.PlayMode
             yield return WaitFor(GameState.Results);
             Assert.IsTrue(_ui.Results.Visible);
             Assert.AreEqual(200, _flow.LastSummary.ClawCoins);
-            Assert.AreEqual(200 + _flow.LastSummary.RunCoins, _flow.Profile.Coins);
+            var sum = _flow.LastSummary;
+            Assert.AreEqual(sum.BalanceBefore + sum.RunCoins + sum.ClawCoins + sum.RewardCoins, _flow.Profile.Coins);
+            Assert.IsTrue(_flow.Profile.Achievements.Contains("primeira_saida"));
 
             _flow.PlayAgain();
             yield return WaitFor(GameState.Running);
             Assert.Less(_flow.Driver.Sim.Distance, 20f, "nova corrida começou do zero");
+        }
+
+        [UnityTest] // L-01 + aparência
+        public IEnumerator Oficina_CompraEEquipaPropulsor()
+        {
+            _flow.SkipSplash();
+            yield return WaitFor(GameState.MainMenu);
+            _flow.Profile.Coins = 10000;
+            Assert.AreEqual(Propulsor.Core.Economy.PurchaseResult.Ok, _flow.Buy("jet_bolhas"));
+            Assert.AreEqual(Propulsor.Core.Economy.EquipResult.Ok, _flow.Equip("jet_bolhas"));
+            Assert.AreEqual("jet_bolhas", _flow.Services.Inventory.EquippedIn("jetpack"));
+            _ui.Workshop.Show();
+            yield return null;
+            Assert.IsTrue(_ui.Workshop.Visible);
         }
 
         [UnityTest]

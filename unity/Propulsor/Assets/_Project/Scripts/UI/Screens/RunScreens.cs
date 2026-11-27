@@ -9,6 +9,7 @@ namespace Propulsor.UI
     {
         private Text _distance, _best, _coins, _countdown, _popup;
         private RectTransform _popupBox;
+        private Button _headStart;
         private int _lastCoins = -1;
         private float _coinPop;
 
@@ -26,6 +27,9 @@ namespace Propulsor.UI
 
             _countdown = UIFactory.Label("Contagem", root, "", 200, Theme.Text, bold: true);
             _countdown.rectTransform.Place(0.5f, 0.55f, 400f, 260f);
+
+            _headStart = UIFactory.Button("Arrancada", root, "", Theme.Accent, () => Ui.Controller.UseHeadStart(), 34);
+            _headStart.GetComponent<RectTransform>().Place(0.85f, 0.75f, 400f, 100f);
 
             var box = UIFactory.Panel("Aviso", root, Theme.BgPanel);
             box.raycastTarget = false;
@@ -59,6 +63,9 @@ namespace Propulsor.UI
                 ? Mathf.CeilToInt(c.Flow.Remaining / GameFlow.CountdownTime * 3f).ToString()
                 : "";
 
+            _headStart.gameObject.SetActive(c.CanUseHeadStart);
+            if (c.CanUseHeadStart) _headStart.SetLabel($"ARRANCADA (x{c.Profile.HeadStarts})");
+
             var q = c.Popups;
             _popupBox.gameObject.SetActive(q.Current != null);
             if (q.Current != null)
@@ -76,13 +83,15 @@ namespace Propulsor.UI
         protected override ScreenAnim Anim => ScreenAnim.Pop;
         private Button _giveUp;
         private bool _confirming;
+        private Text _missions;
 
         protected override void Build(RectTransform root)
         {
             UIFactory.Panel("Escurecer", root, Theme.Dim).rectTransform.Anchor(-0.1f, -0.1f, 1.1f, 1.1f);
             var panel = UIFactory.Panel("Painel", root, Theme.BgPanel).rectTransform.Place(0.5f, 0.5f, 1150f, 760f);
             UIFactory.Label("Titulo", panel, "PAUSADO", 64, Theme.Text, bold: true).rectTransform.Place(0.5f, 0.88f, 900f, 90f);
-            UIFactory.Label("Missoes", panel, "Missões\n(chegam na Fase 8)", 34, Theme.TextDim).rectTransform.Place(0.5f, 0.64f, 900f, 120f);
+            _missions = UIFactory.Label("Missoes", panel, "", 30, Theme.Text);
+            _missions.rectTransform.Place(0.5f, 0.64f, 1050f, 200f);
 
             UIFactory.Button("Continuar", panel, "▶ CONTINUAR", Theme.Primary, () => Ui.Controller.Resume())
                 .GetComponent<RectTransform>().Place(0.5f, 0.38f, 520f, 120f);
@@ -96,6 +105,10 @@ namespace Propulsor.UI
         {
             _confirming = false;
             _giveUp.SetLabel("✖ DESISTIR");
+            var mm = Ui.Controller.Services.Missions;
+            var lines = new System.Text.StringBuilder();
+            foreach (var m in mm.Active) lines.AppendLine(MissionsScreen.MissionLine(mm, m));
+            _missions.text = lines.ToString().TrimEnd();
         }
 
         private void OnGiveUp()

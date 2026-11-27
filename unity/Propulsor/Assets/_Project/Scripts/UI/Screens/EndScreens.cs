@@ -127,7 +127,7 @@ namespace Propulsor.UI
     public sealed class ResultsScreen : UIScreen
     {
         protected override ScreenAnim Anim => ScreenAnim.SlideUp;
-        private Text _distance, _record, _runCoins, _clawCoins, _total;
+        private Text _distance, _record, _runCoins, _clawCoins, _rewards, _total, _progress;
         private float _t;
         private RunSummary _s;
 
@@ -141,19 +141,25 @@ namespace Propulsor.UI
             _record = UIFactory.Label("Recorde", root, "", 48, Theme.Gold, bold: true);
             _record.rectTransform.Place(0.5f, 0.7f, 1200f, 70f);
 
-            _runCoins = UIFactory.Label("PorcasCorrida", root, "", 40, Theme.Text, TextAnchor.MiddleLeft);
-            _runCoins.rectTransform.Place(0.5f, 0.56f, 900f, 60f);
-            _clawCoins = UIFactory.Label("PorcasGarra", root, "", 40, Theme.Text, TextAnchor.MiddleLeft);
-            _clawCoins.rectTransform.Place(0.5f, 0.48f, 900f, 60f);
-            _total = UIFactory.Label("Total", root, "", 46, Theme.Gold, TextAnchor.MiddleLeft, true);
-            _total.rectTransform.Place(0.5f, 0.38f, 900f, 70f);
+            _runCoins = UIFactory.Label("PorcasCorrida", root, "", 36, Theme.Text, TextAnchor.MiddleLeft);
+            _runCoins.rectTransform.Place(0.3f, 0.58f, 900f, 56f);
+            _clawCoins = UIFactory.Label("PorcasGarra", root, "", 36, Theme.Text, TextAnchor.MiddleLeft);
+            _clawCoins.rectTransform.Place(0.3f, 0.51f, 900f, 56f);
+            _rewards = UIFactory.Label("Recompensas", root, "", 36, Theme.Text, TextAnchor.MiddleLeft);
+            _rewards.rectTransform.Place(0.3f, 0.44f, 900f, 56f);
+            _total = UIFactory.Label("Total", root, "", 44, Theme.Gold, TextAnchor.MiddleLeft, true);
+            _total.rectTransform.Place(0.3f, 0.35f, 900f, 66f);
+            _progress = UIFactory.Label("Progresso", root, "", 30, Theme.Text, TextAnchor.UpperLeft);
+            _progress.rectTransform.Place(0.76f, 0.47f, 820f, 300f);
 
-            UIFactory.Button("Oficina", root, "OFICINA", Theme.BgPanel, () => Ui.ShowToast("OFICINA: chega na Fase 8"))
-                .GetComponent<RectTransform>().Place(0.2f, 0.12f, 380f, 120f);
+            UIFactory.Button("Oficina", root, "OFICINA", Theme.BgPanel, () => Ui.Workshop.Show())
+                .GetComponent<RectTransform>().Place(0.14f, 0.12f, 340f, 120f);
+            UIFactory.Button("Missoes", root, "MISSÕES", Theme.BgPanel, () => Ui.Missions.Show())
+                .GetComponent<RectTransform>().Place(0.36f, 0.12f, 340f, 120f);
             UIFactory.Button("DeNovo", root, "▶ DE NOVO", Theme.Accent, () => Ui.Controller.PlayAgain(), 52)
-                .GetComponent<RectTransform>().Place(0.5f, 0.12f, 480f, 130f);
+                .GetComponent<RectTransform>().Place(0.62f, 0.12f, 440f, 130f);
             UIFactory.Button("Menu", root, "MENU", Theme.BgPanel, () => Ui.Controller.BackToMenu())
-                .GetComponent<RectTransform>().Place(0.8f, 0.12f, 380f, 120f);
+                .GetComponent<RectTransform>().Place(0.86f, 0.12f, 300f, 120f);
         }
 
         protected override void OnShow()
@@ -161,6 +167,19 @@ namespace Propulsor.UI
             _s = Ui.Controller.LastSummary;
             _t = 0f;
             _record.text = _s.IsNewBest ? "★ NOVO RECORDE! ★" : "";
+
+            var report = Ui.Controller.LastReport;
+            var p = Ui.Controller.Profile;
+            var info = Propulsor.Core.Progress.RankTable.Get(p.Rank);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Patente: nível {p.Rank} \"{info.Name}\"" + (info.StarsToNext > 0 ? $"  {p.StarsInRank}/{info.StarsToNext} ★" : ""));
+            if (report != null)
+            {
+                foreach (var m in report.MissionsCompleted) sb.AppendLine($"✓ {m.Text} {new string('★', m.Stars)}");
+                foreach (var r in report.RankUps) sb.AppendLine($"▲ Subiu para \"{r.Name}\" (+{r.Reward} porcas)");
+                foreach (var a in report.Achievements) sb.AppendLine($"🏆 {a.Name} (+{a.Reward} porcas)");
+            }
+            _progress.text = sb.ToString().TrimEnd();
         }
 
         public override void Tick(float dt)
@@ -170,7 +189,8 @@ namespace Propulsor.UI
             _distance.text = $"{Count(_s.Distance, 0f, 0.6f):N0} m";
             _runCoins.text = $"Porcas da corrida ........ {Count(_s.RunCoins, 0.6f, 0.4f):N0}";
             _clawCoins.text = $"Garra da Sorte ............ {Count(_s.ClawCoins, 1.0f, 0.4f):N0}";
-            _total.text = $"Saldo ............ {Mathf.RoundToInt(Mathf.Lerp(_s.BalanceBefore, _s.BalanceAfter, Ease(1.4f, 1.0f))):N0}";
+            _rewards.text = $"Recompensas ............... {Count(_s.RewardCoins, 1.4f, 0.4f):N0}";
+            _total.text = $"Saldo ............ {Mathf.RoundToInt(Mathf.Lerp(_s.BalanceBefore, _s.BalanceAfter, Ease(1.8f, 1.0f))):N0}";
         }
 
         private int Count(int value, float start, float dur) => Mathf.RoundToInt(value * Ease(start, dur));

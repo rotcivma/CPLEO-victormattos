@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Propulsor.Core.Economy;
 using Propulsor.Core.Gameplay.Vehicles;
 using Propulsor.Core.Physics;
 using UnityEngine;
@@ -20,10 +22,14 @@ namespace Propulsor.Gameplay
         private SpriteRenderer _vehicleCockpit;
         private Transform _pointer;
         private VehicleKind? _shownVehicle;
+        private Sprite _square;
+        private SpriteRenderer _hat;
+        private readonly Dictionary<VehicleKind, Color> _vehicleTint = new Dictionary<VehicleKind, Color>();
 
         public void Bind(RunDriver driver, Transform onFoot, SpriteRenderer body, ParticleSystem jet, Sprite square)
         {
             _driver = driver;
+            _square = square;
             _onFoot = onFoot;
             _body = body;
             _jet = jet;
@@ -37,6 +43,45 @@ namespace Propulsor.Gameplay
             _pointer.GetComponent<SpriteRenderer>().color = new Color32(0xFF, 0xD2, 0x3F, 255);
             _vehicleRoot.gameObject.SetActive(false);
         }
+
+        /// <summary>Aplica roupa, acessório, propulsor e pinturas equipados (cosméticos).</summary>
+        public void ApplyAppearance(Inventory inv)
+        {
+            var outfit = inv.Find(inv.EquippedIn("outfit"));
+            if (outfit != null) _body.color = Hex(outfit.ColorA);
+
+            var hat = inv.Find(inv.EquippedIn("hat"));
+            if (_hat == null)
+            {
+                _hat = MakeSprite("Chapeu", _body.transform, _square, 12);
+                _hat.transform.localPosition = new Vector3(0f, 0.55f, 0f);
+                _hat.transform.localScale = new Vector3(1.3f, 0.15f, 1f);
+            }
+            _hat.gameObject.SetActive(hat != null);
+            if (hat != null) _hat.color = Hex(hat.ColorA);
+
+            var jet = inv.Find(inv.EquippedIn("jetpack"));
+            if (jet != null)
+            {
+                var main = _jet.main;
+                main.startColor = new ParticleSystem.MinMaxGradient(Hex(jet.ColorA), Hex(jet.ColorB));
+                main.startSize = jet.Id == "jet_bolhas" ? 0.3f : 0.18f;
+            }
+
+            _vehicleTint.Clear();
+            foreach (var k in VehicleFactory.All)
+            {
+                var skin = inv.Find(inv.EquippedIn(ItemCatalog.SkinSlot(k)));
+                if (skin != null) _vehicleTint[k] = Hex(skin.ColorA);
+            }
+            _shownVehicle = null; // força redesenho do veículo
+        }
+
+        /// <summary>Converte 0xRRGGBBAA em cor.</summary>
+        public static Color Hex(uint rgba) =>
+            new Color32((byte)(rgba >> 24), (byte)(rgba >> 16), (byte)(rgba >> 8), (byte)rgba);
+
+        private Color BodyColorFor(VehicleKind k) => _vehicleTint.TryGetValue(k, out var c) ? c : VehicleColor(k);
 
         private static SpriteRenderer MakeSprite(string name, Transform parent, Sprite s, int order)
         {
@@ -102,7 +147,7 @@ namespace Propulsor.Gameplay
             if (_shownVehicle != v.Kind)
             {
                 _shownVehicle = v.Kind;
-                _vehicleBody.color = VehicleColor(v.Kind);
+                _vehicleBody.color = BodyColorFor(v.Kind);
                 _vehicleBody.transform.localScale = new Vector3(v.Width, v.Height, 1f);
                 _vehicleBody.transform.localPosition = new Vector3(0f, v.Height * 0.5f, 0f);
                 _vehicleCockpit.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
@@ -141,7 +186,7 @@ namespace Propulsor.Gameplay
 
             // Blindado: escurece a cada acerto
             if (v is HeavyRigMotor)
-                _vehicleBody.color = Color.Lerp(new Color32(0x55, 0x55, 0x66, 255), VehicleColor(v.Kind),
+                _vehicleBody.color = Color.Lerp(new Color32(0x55, 0x55, 0x66, 255), BodyColorFor(v.Kind),
                                                 v.HitPoints / (float)HeavyRigMotor.MaxHitPoints);
         }
 

@@ -34,6 +34,8 @@ namespace Propulsor.UI
         protected abstract void Build(RectTransform root);
         /// <summary>Chamado ao aparecer (atualiza textos).</summary>
         protected virtual void OnShow() { }
+        /// <summary>Chamado ao começar a sair.</summary>
+        protected virtual void OnHide() { }
         /// <summary>Chamado a cada quadro enquanto visível.</summary>
         public virtual void Tick(float dt) { }
 
@@ -51,6 +53,7 @@ namespace Propulsor.UI
         {
             if (!Visible) return;
             Visible = false;
+            OnHide();
             if (instant || !Root.gameObject.activeInHierarchy) { Root.gameObject.SetActive(false); return; }
             Restart(Animate(false));
         }

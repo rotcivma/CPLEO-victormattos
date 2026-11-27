@@ -1,4 +1,4 @@
-# PROPULSOR — protótipo Unity (Fases 5–7: movimentação, gameplay e menus)
+# PROPULSOR — protótipo Unity (Fases 5–8)
 
 Jogo original do gênero "runner com propulsor". Ver `docs/` para toda a
 investigação, arquitetura e planos.
@@ -25,7 +25,11 @@ investigação, arquitetura e planos.
 | **V** | montar o próximo veículo (teste) |
 | **R** | reiniciar (só no modo sem menus) |
 
-Atalhos de teste nas Configurações (⚙): **+1 Segunda Chance** e **+3 Fichas**, para ver a oferta de revive e a Garra da Sorte.
+Atalhos de teste nas Configurações (⚙, só no editor/dev build): **+5.000 porcas** e **+3 Fichas**.
+
+### Salvamento
+O perfil fica em `Application.persistentDataPath/perfil.json` (com `perfil.json.bak`).
+Para começar do zero: ⚙ ▸ **Apagar todo o progresso** (toque duas vezes).
 
 ### Ajustar a física ao vivo
 *Assets ▸ Create ▸ Propulsor ▸ Player Physics*, salve como
@@ -45,11 +49,15 @@ Assets/_Project/Scripts/
     Physics/    PlayerMotor, FixedStepper
     Gameplay/   RunSimulation, trechos, validador, perigos, drones, veículos
     Events/     EventBus e eventos
-    Flow/       GameFlow, ClawMachine, PopupQueue, SessionProfile
+    Flow/       GameFlow, ClawMachine, PopupQueue, SessionProfile (perfil salvo)
+    Economy/    ItemCatalog, Wallet, Inventory, Store, RunModifiers (gadgets)
+    Progress/   RunTracker, MissionManager, RankTable, AchievementManager
+    Save/       MiniJson, SaveManager (JSON + .bak + migração)
+    GameServices.cs  composição dos sistemas de meta-jogo
   Data/       ScriptableObjects (PlayerPhysicsDef)
   Gameplay/   RunDriver, FlowController, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
   UI/         UIManager, UIFactory, UIScreen e telas (Splash, Carregamento, Menu, HUD, Pausa,
-              Revive, Garra da Sorte, Resultados, Configurações)
+              Revive, Garra da Sorte, Resultados, Configurações, Oficina, Missões, Conquistas)
   Bootstrap/  PrototypeBootstrap (monta a cena em código)
 Assets/Tests/ EditMode + PlayMode
 ```
