@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -19,7 +20,35 @@ namespace Propulsor.Gameplay
 
     public sealed class PlayerInput : IThrustInput
     {
-        public bool IsHeld
+        private int _blockedFrame = -1;
+        private bool _blocked;
+
+        /// <summary>
+        /// Toques que começam sobre um elemento de UI (ex.: botão de pausa) não acionam o propulsor
+        /// até serem soltos.
+        /// </summary>
+        private bool Blocked
+        {
+            get
+            {
+                if (_blockedFrame == Time.frameCount) return _blocked;
+                _blockedFrame = Time.frameCount;
+                if (!RawHeld) _blocked = false;
+                else if (RawPressed && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                    _blocked = true;
+#if ENABLE_LEGACY_INPUT_MANAGER && !ENABLE_INPUT_SYSTEM
+                if (RawPressed && EventSystem.current != null && Input.touchCount > 0 &&
+                    EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId))
+                    _blocked = true;
+#endif
+                return _blocked;
+            }
+        }
+
+        public bool IsHeld => RawHeld && !Blocked;
+        public bool PressedThisFrame => RawPressed && !Blocked;
+
+        private static bool RawHeld
         {
             get
             {
@@ -37,7 +66,7 @@ namespace Propulsor.Gameplay
             }
         }
 
-        public bool PressedThisFrame
+        private static bool RawPressed
         {
             get
             {

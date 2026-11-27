@@ -60,10 +60,13 @@ namespace Propulsor.Core.Physics
             State = IsOnFloor ? MotorState.Grounded : MotorState.Falling;
         }
 
+        private float _speedAtDeath;
+
         /// <summary>Mata o jogador: inicia o "ragdoll". Ignorado se já estiver morto.</summary>
         public void Kill()
         {
             if (IsDead) return;
+            _speedAtDeath = VelocityX;
             VelocityY = Math.Max(VelocityY, 0f) + _p.DeathPopSpeed;
             SetState(MotorState.Dead);
         }
@@ -104,6 +107,18 @@ namespace Propulsor.Core.Physics
 
             SetState(next);
             if (wasAirborne && next == MotorState.Grounded) Landed?.Invoke();
+        }
+
+        /// <summary>
+        /// Revive no ponto onde o corpo parou, com a velocidade que tinha ao morrer
+        /// (Segunda Chance). Ignorado se estiver vivo.
+        /// </summary>
+        public void Revive()
+        {
+            if (!IsDead) return;
+            VelocityX = _speedAtDeath > 0f ? _speedAtDeath : _p.StartSpeed;
+            VelocityY = 0f;
+            SetState(IsOnFloor ? MotorState.Grounded : MotorState.Falling);
         }
 
         /// <summary>

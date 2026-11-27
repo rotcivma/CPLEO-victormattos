@@ -4,7 +4,8 @@
     "references": [
         "Propulsor.Core",
         "Propulsor.Data",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

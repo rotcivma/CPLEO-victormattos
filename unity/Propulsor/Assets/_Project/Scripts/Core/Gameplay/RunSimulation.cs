@@ -26,6 +26,7 @@ namespace Propulsor.Core.Gameplay
         public float SpawnAhead = 60f;
         public float CullBehind = 25f;
         public float InvulnerableAfterVehicle = 1.0f;
+        public float InvulnerableAfterRevive = 2.0f;
         public float InvulnerableAfterArmorHit = 0.5f;
         public float EjectSpeed = 8f;
         public float PickupRadius = 0.35f;
@@ -168,6 +169,16 @@ namespace Propulsor.Core.Gameplay
             v.Mount(Motor.Y, Config.Physics);
             Vehicle = v;
             Bus.Publish(new VehicleMounted(kind));
+        }
+
+        /// <summary>Segunda Chance: revive no ponto da morte, invulnerável por 2 s.</summary>
+        public void Revive()
+        {
+            if (!IsDead) return;
+            Motor.Revive();
+            DeathCause = null;
+            InvulnerableTime = Config.InvulnerableAfterRevive;
+            Bus.Publish(new PlayerRevived());
         }
 
         /// <summary>Mata o jogador imediatamente (teste/depuração), ignorando veículo e invulnerabilidade.</summary>

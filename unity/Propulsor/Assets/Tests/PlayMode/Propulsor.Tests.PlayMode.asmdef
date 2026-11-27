@@ -6,6 +6,7 @@
         "Propulsor.Data",
         "Propulsor.Gameplay",
         "Propulsor.Bootstrap",
+        "Propulsor.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

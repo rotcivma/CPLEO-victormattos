@@ -4,7 +4,8 @@
     "references": [
         "Propulsor.Core",
         "Propulsor.Data",
-        "Propulsor.Gameplay"
+        "Propulsor.Gameplay",
+        "Propulsor.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

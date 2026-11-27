@@ -28,17 +28,17 @@ Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falho
 | K-02 | Moedas | Dobro ×2 aplica só nas porcas da corrida | U | | 🟡 parcial: valor da moeda configurável testado; bônus "Dobro" depende da Fase 8 |
 | K-03 | Moedas | Ímã atrai dentro do raio | P | | ✅ U (dotnet, 2026-11-27) |
 | V-01..08 | Veículos | Controle de cada veículo conforme doc 3·01 §3 | P/M | | ✅ U lógica (dotnet, 2026-11-27) · ⏳ M sensação no Unity |
-| N-01 | Navegação | Splash→Carregamento→Menu | P | | ⏳ |
-| N-02 | Navegação | Toque livre no menu inicia corrida | P | | ⏳ |
-| N-03 | Navegação | Pausa/continuar com contagem; perda de foco pausa | P | | ⏳ |
-| N-04 | Navegação | Morte: revive → garra → resultados conforme inventário | P | caminhos do diagrama 3·01 §1 | ⏳ |
+| N-01 | Navegação | Splash→Carregamento→Menu | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-02 | Navegação | Toque livre no menu inicia corrida | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-03 | Navegação | Pausa/continuar com contagem; perda de foco pausa | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-04 | Navegação | Morte: revive → garra → resultados conforme inventário | P | caminhos do diagrama 3·01 §1 | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
 | L-01 | Loja | Compra com saldo suficiente | U | debita, concede, salva | ⏳ |
 | L-02 | Loja | Saldo insuficiente | U | `SaldoInsuficiente`, nada muda | ⏳ |
 | L-03 | Loja | Comprar item já possuído | U | `JaPossui` | ⏳ |
 | I-01 | Inventário | Equipar 3º gadget sem slot extra | U | recusado | ⏳ |
 | I-02 | Inventário | Consumir Segunda Chance decrementa | U | | ⏳ |
-| G-01 | Garra | 1 ficha = 1 tentativa; tabela por pesos (10⁵ sorteios) | U | frequências ±1 % | ⏳ |
-| G-02 | Garra | Troca de fichas = 100 porcas cada | U | | ⏳ |
+| G-01 | Garra | 1 ficha = 1 tentativa; tabela por pesos (10⁵ sorteios) | U | frequências ±1 % | ✅ U (dotnet, 2026-11-27) |
+| G-02 | Garra | Troca de fichas = 100 porcas cada | U | | ✅ U (dotnet, 2026-11-27) |
 | Q-01 | Missões | Sempre 3 ativas após RunEnded | U | | ⏳ |
 | Q-02 | Missões | Escopo Run zera a cada corrida; Lifetime acumula | U | | ⏳ |
 | Q-03 | Missões | Pular custa 500 × estrelas | U | | ⏳ |
@@ -48,7 +48,7 @@ Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falho
 | S-01 | Save | Salvar/carregar ida e volta | U | igual | ⏳ |
 | S-02 | Save | Arquivo corrompido ⇒ usa .bak | U | | ⏳ |
 | S-03 | Save | Migração v0→v1 | U | | ⏳ |
-| R-01 | Reinício | "De novo" reseta estado de corrida e mantém progresso | P | | ⏳ |
+| R-01 | Reinício | "De novo" reseta estado de corrida e mantém progresso | P | | 🟡 U fluxo + reinício da simulação (dotnet) · ⏳ P |
 | D-01 | Desempenho | 60 fps em aparelho Android médio por 10 min | M | ≥ 58 fps p95 | ⏳ |
 
 Regra do projeto: **nenhuma funcionalidade é declarada reproduzida sem o teste correspondente executado e registrado aqui.**

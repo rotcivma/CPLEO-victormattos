@@ -28,6 +28,15 @@ namespace Propulsor.Gameplay
         /// <summary>Disparado após cada reinício (views limpam seus pools).</summary>
         public event Action Restarted;
 
+        /// <summary>A simulação avança? (o fluxo de jogo controla; padrão: sempre).</summary>
+        public Func<bool> CanSimulate = () => true;
+        /// <summary>O input controla a personagem? (padrão: sempre).</summary>
+        public Func<bool> CanControl = () => true;
+        /// <summary>Reinicia sozinho ao tocar depois de parar (só sem fluxo de menus).</summary>
+        public bool AutoRestart = true;
+        /// <summary>Teclas de depuração K/V/R ativas.</summary>
+        public bool DebugKeys = true;
+
         private IThrustInput _input;
         private Func<RunConfig> _configFactory;
         private readonly FixedStepper _stepper = new FixedStepper(0.02f);
@@ -69,17 +78,31 @@ namespace Propulsor.Gameplay
             if (Sim == null) return;
             if (liveTuning && physicsDef != null) physicsDef.CopyTo(Sim.Config.Physics);
 
-            if (PlayerInput.DebugKeyDown('K')) Kill();
-            if (PlayerInput.DebugKeyDown('V') && Sim.Vehicle == null)
+            bool controls = CanControl();
+            if (DebugKeys && controls)
             {
-                Sim.Mount(VehicleFactory.All[_debugVehicle % VehicleFactory.All.Length]);
-                _debugVehicle++;
+                if (PlayerInput.DebugKeyDown('K')) Kill();
+                if (PlayerInput.DebugKeyDown('V') && Sim.Vehicle == null)
+                {
+                    Sim.Mount(VehicleFactory.All[_debugVehicle % VehicleFactory.All.Length]);
+                    _debugVehicle++;
+                }
             }
-            bool pressedNow = _input.PressedThisFrame;
-            if (PlayerInput.DebugKeyDown('R') || (Sim.IsOver && pressedNow)) { Restart(); return; }
+            bool pressedNow = controls && _input.PressedThisFrame;
+            if (AutoRestart && ((DebugKeys && PlayerInput.DebugKeyDown('R')) || (Sim.IsOver && _input.PressedThisFrame)))
+            {
+                Restart();
+                return;
+            }
+
+            if (!CanSimulate())
+            {
+                _pressedLatch = false;
+                return;
+            }
 
             if (pressedNow) _pressedLatch = true;
-            bool held = _input.IsHeld;
+            bool held = controls && _input.IsHeld;
 
             _stepper.Advance(Time.deltaTime, dt =>
             {

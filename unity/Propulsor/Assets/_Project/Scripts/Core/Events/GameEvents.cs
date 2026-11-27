@@ -88,4 +88,6 @@ namespace Propulsor.Core.Events
         public readonly int Id;
         public MissileLaunched(int id) { Id = id; }
     }
+
+    public readonly struct PlayerRevived { }
 }

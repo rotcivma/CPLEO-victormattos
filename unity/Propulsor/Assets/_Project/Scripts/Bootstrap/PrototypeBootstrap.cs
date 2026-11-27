@@ -2,6 +2,7 @@ using System;
 using Propulsor.Core.Gameplay;
 using Propulsor.Data;
 using Propulsor.Gameplay;
+using Propulsor.UI;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -22,12 +23,28 @@ namespace Propulsor.Bootstrap
         {
             if (!AutoBuildEnabled) return;
             if (Object.FindAnyObjectByType<RunDriver>() != null) return;
-            Build(new PlayerInput(), Resources.Load<PlayerPhysicsDef>("PlayerPhysics"));
+            BuildGame(new PlayerInput(), Resources.Load<PlayerPhysicsDef>("PlayerPhysics"));
         }
 
-        /// <summary>Cria câmera, corredor, simulação, views e HUD. Retorna o condutor da corrida.</summary>
+        /// <summary>
+        /// Jogo completo: corrida + fluxo de telas (splash → carregamento → menu → corrida → ...).
+        /// </summary>
+        public static FlowController BuildGame(IThrustInput input, PlayerPhysicsDef def = null,
+                                               Func<RunConfig> configFactory = null)
+        {
+            var driver = Build(input, def, configFactory, debugHud: false);
+            driver.DebugKeys = Application.isEditor || Debug.isDebugBuild;
+            var flow = driver.gameObject.AddComponent<FlowController>();
+            flow.Bind(driver);
+            new GameObject("Interface").AddComponent<UIManager>().Bind(flow);
+            return flow;
+        }
+
+        /// <summary>Cria câmera, corredor, simulação e views (sem menus). Retorna o condutor da corrida.</summary>
         /// <param name="configFactory">Gera a configuração de cada corrida (null = padrão).</param>
-        public static RunDriver Build(IThrustInput input, PlayerPhysicsDef def = null, Func<RunConfig> configFactory = null)
+        /// <param name="debugHud">Mostra o HUD de depuração (usado sem menus).</param>
+        public static RunDriver Build(IThrustInput input, PlayerPhysicsDef def = null, Func<RunConfig> configFactory = null,
+                                      bool debugHud = true)
         {
             Application.targetFrameRate = 60;
             if (def == null) def = ScriptableObject.CreateInstance<PlayerPhysicsDef>();
@@ -82,8 +99,8 @@ namespace Propulsor.Bootstrap
             corridor.Build(cam.transform, def.floorY, def.ceilingY, square, font);
             new GameObject("Mundo").AddComponent<WorldView>().Bind(driver, cam, square, circle);
 
-            // HUD de depuração
-            new GameObject("DebugHud").AddComponent<DebugHud>().Bind(driver);
+            // HUD de depuração (apenas no modo sem menus)
+            if (debugHud) new GameObject("DebugHud").AddComponent<DebugHud>().Bind(driver);
 
             return driver;
         }

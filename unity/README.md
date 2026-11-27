@@ -1,4 +1,4 @@
-# PROPULSOR — protótipo Unity (Fases 5–6: movimentação e gameplay)
+# PROPULSOR — protótipo Unity (Fases 5–7: movimentação, gameplay e menus)
 
 Jogo original do gênero "runner com propulsor". Ver `docs/` para toda a
 investigação, arquitetura e planos.
@@ -12,7 +12,7 @@ investigação, arquitetura e planos.
 2. Escolha a versão Unity 6 quando o Hub perguntar.
 3. Se aparecer o aviso do **Input System** pedindo para habilitar os novos backends, clique **Yes** (o editor reinicia). Clicar *No* também funciona (o código suporta os dois sistemas).
 4. Abra qualquer cena (a `SampleScene` vazia ou *File ▸ New Scene*) e aperte **Play**.
-   A cena do protótipo é montada automaticamente por `PrototypeBootstrap`.
+   O jogo é montado automaticamente por `PrototypeBootstrap` (splash → carregamento → menu → corrida).
 5. **Commit dos arquivos `.meta`** que o Unity gerar na primeira importação.
 
 ### Controles
@@ -20,9 +20,12 @@ investigação, arquitetura e planos.
 |---|---|
 | Segurar toque / clique / espaço | subir (propulsor) |
 | Soltar | cair |
-| **K** | matar o personagem (teste do "ragdoll") |
+| Toque livre no menu | começar a corrida |
+| **K** | matar o personagem (teste; só no editor/dev build) |
 | **V** | montar o próximo veículo (teste) |
-| **R** ou toque após parar | reiniciar |
+| **R** | reiniciar (só no modo sem menus) |
+
+Atalhos de teste nas Configurações (⚙): **+1 Segunda Chance** e **+3 Fichas**, para ver a oferta de revive e a Garra da Sorte.
 
 ### Ajustar a física ao vivo
 *Assets ▸ Create ▸ Propulsor ▸ Player Physics*, salve como
@@ -42,8 +45,11 @@ Assets/_Project/Scripts/
     Physics/    PlayerMotor, FixedStepper
     Gameplay/   RunSimulation, trechos, validador, perigos, drones, veículos
     Events/     EventBus e eventos
+    Flow/       GameFlow, ClawMachine, PopupQueue, SessionProfile
   Data/       ScriptableObjects (PlayerPhysicsDef)
-  Gameplay/   RunDriver, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
+  Gameplay/   RunDriver, FlowController, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
+  UI/         UIManager, UIFactory, UIScreen e telas (Splash, Carregamento, Menu, HUD, Pausa,
+              Revive, Garra da Sorte, Resultados, Configurações)
   Bootstrap/  PrototypeBootstrap (monta a cena em código)
 Assets/Tests/ EditMode + PlayMode
 ```
