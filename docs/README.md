@@ -41,7 +41,13 @@ do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
 | 1 | [fase-1/06-economia.md](fase-1/06-economia.md) — moedas, tokens, Final Spin, loja | ✅ (inicial) |
 | 1 | [fase-1/07-progressao.md](fase-1/07-progressao.md) — missões, patentes, conquistas | ✅ (inicial) |
 | 1 | [fase-1/08-lacunas-e-proximos-passos.md](fase-1/08-lacunas-e-proximos-passos.md) — dúvidas, limitações, plano | ✅ |
-| 2–4 | Documentação visual detalhada, mapeamento de sistemas, arquitetura | ⏳ |
+| 2 | [fase-2/01-identidade-visual-original.md](fase-2/01-identidade-visual-original.md) — identidade própria, tokens, responsividade | ✅ |
+| 2 | [fase-2/02-telas-detalhadas.md](fase-2/02-telas-detalhadas.md) — wireframes e especificação de cada tela | ✅ |
+| 3 | [fase-3/01-mapeamento-sistemas.md](fase-3/01-mapeamento-sistemas.md) — máquinas de estado, geração, eventos, fluxograma | ✅ |
+| 4 | [fase-4/01-arquitetura.md](fase-4/01-arquitetura.md) — 19 componentes | ✅ |
+| 4 | [fase-4/02-modelo-de-dados.md](fase-4/02-modelo-de-dados.md) — Defs, SaveData, tabelas | ✅ |
+| 4 | [fase-4/03-plano-desenvolvimento.md](fase-4/03-plano-desenvolvimento.md) | ✅ |
+| 4 | [fase-4/04-plano-de-testes.md](fase-4/04-plano-de-testes.md) — matriz de testes | ✅ |
 | 5–10 | Protótipo e implementação (Unity 2D / C#) | ⏳ (bloqueado até aprovação da Fase 1) |
 
 > Nota: o arquivo `cp1leoo.txt` na raiz do repositório é um código C# não
