@@ -32,9 +32,17 @@ e implementação de um **jogo original do mesmo gênero** em Unity 2D / C#.
 | 12 | Modelo de dados | `docs/fase-4/02-modelo-de-dados.md` · `Core/Flow/SessionProfile.cs` · `Core/Save/SaveManager.cs` (JSON salvo) | ✅ |
 | 13 | Plano de desenvolvimento | `docs/fase-4/03-plano-desenvolvimento.md` | ✅ (executado nas fases 5–10) |
 | 14 | Plano de testes | `docs/fase-4/04-plano-de-testes.md` (matriz com resultados) | ✅ 57 itens aprovados na lógica · pendências na §5 |
-| 15 | Protótipo funcional | `unity/Propulsor` (63 scripts, cerca de 10.400 linhas) · instruções em `unity/README.md` | ⚠️ **código completo e lógica testada; ainda não compilado nem executado no Unity** (ver §4) |
+| 15 | Protótipo funcional | `web/propulsor.html` (jogável no navegador, verificado sem erros) · `unity/Propulsor` (63 scripts, cerca de 10.400 linhas) · instruções em `unity/README.md` | ⚠️ **código completo e lógica testada; ainda não compilado nem executado no Unity** (ver §4) |
 
-## 3. O que o protótipo contém
+## 3. Versão jogável no navegador
+`web/propulsor.html` é uma versão autocontida, sem dependências, que dá para jogar agora no computador ou no celular, sem Unity.
+- **Mesmas regras do Core C#:** física, os 14 trechos, a curva de dificuldade, arcos, feixes, drones com aviso, os 8 veículos, robôs operários, raspões, arrancada e Garra da Sorte.
+- **Oficina:** gadgets, consumíveis, propulsores e roupas.
+- **Progressão:** missões e patentes, com prestígio.
+- **Salvamento:** fica no navegador (`localStorage`).
+- **Fora desta versão:** conquistas e música, que existem só no projeto Unity.
+
+## 4. O que o protótipo Unity contém
 | Área | Conteúdo |
 |---|---|
 | Corrida | Corredor infinito com 14 trechos validados; arcos de faísca fixos e giratórios; feixes de corte; drones-foguete com aviso e rajadas; dificuldade crescente; porcas, fichas e caixas de veículo; 8 veículos; robôs operários; raspões; arrancada |
@@ -44,7 +52,7 @@ e implementação de um **jogo original do mesmo gênero** em Unity 2D / C#.
 | Áudio | 21 efeitos e 3 músicas, todos sintetizados; música abaixa em avisos e na pausa |
 | Qualidade | Lógica 100% em C# puro, testável fora do Unity; 50 Hz em passo fixo; corrida sem alocar memória depois de aquecida |
 
-## 4. Testes — situação final
+## 5. Testes — situação final
 | Conjunto | Quantidade | Executado | Resultado |
 |---|---|---|---|
 | Lógica (EditMode, `dotnet test unity/tools/CoreTests`) | **177** | Sim, .NET 8 | **177/177 aprovados** |
@@ -55,14 +63,14 @@ e implementação de um **jogo original do mesmo gênero** em Unity 2D / C#.
 > Pela regra do Prompt Mestre ("não declarar reproduzido sem testar"), nada que dependa
 > do Unity está marcado como reproduzido. O roteiro em `docs/ROTEIRO-VALIDACAO.md` cobre essa validação.
 
-## 5. Limitações e dúvidas registradas
+## 6. Limitações e dúvidas registradas
 1. **Sem observação direta do original.** A rede bloqueou wikis e sites, então a pesquisa usou trechos de busca e não houve gravações. Os parâmetros de física, os tempos dos perigos e os preços são estimativas [E].
 2. **Sem Unity neste ambiente**, como descrito na §4.
 3. **Divergências entre fontes**, por exemplo na troca de tokens (50 ou 100 moedas) e nas estrelas por ciclo (63 ou 105). Adotei valores próprios e registrei cada um.
 4. **Itens da referência fora do escopo:** compras com dinheiro real, salvamento em nuvem, eventos sazonais (S17), placares online.
 5. **A arte é provisória e geométrica.** É original, mas precisa de um artista para chegar a um visual final.
 
-## 6. Próximos passos recomendados
+## 7. Próximos passos recomendados
 1. Rodar o roteiro de validação no Unity 6 e me trazer erros e resultados.
 2. Gravar partidas da referência e calibrar `PlayerPhysics.asset` (testes F-06 e M-01).
 3. Fazer o build Android e medir 60 fps (testes D-01 e O-06 no Profiler).

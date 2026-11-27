@@ -1,6 +1,6 @@
 # Engenharia reversa funcional — runner de jetpack (referência: Jetpack Joyride)
 
-> **Comece por [ENTREGA-FINAL.md](ENTREGA-FINAL.md).**
+> **Comece por [ENTREGA-FINAL.md](ENTREGA-FINAL.md).** Para jogar agora sem Unity: abra `web/propulsor.html` no navegador.
 
 Este diretório reúne a documentação do projeto de engenharia reversa **funcional**
 do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
