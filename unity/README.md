@@ -27,7 +27,7 @@ investigação, arquitetura e planos.
 ### Ajustar a física ao vivo
 *Assets ▸ Create ▸ Propulsor ▸ Player Physics*, salve como
 `Assets/Resources/PlayerPhysics.asset`. O bootstrap carrega esse asset; com
-*Live Tuning* ligado no `PlayerView`, mudanças no Inspector valem durante o Play.
+*Live Tuning* ligado no `RunDriver`, mudanças no Inspector valem durante o Play.
 
 ## Testes
 | Conjunto | Como rodar | Onde |
