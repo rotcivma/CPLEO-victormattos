@@ -25,6 +25,10 @@ namespace Propulsor.Gameplay
         private Sprite _square;
         private SpriteRenderer _hat;
         private readonly Dictionary<VehicleKind, Color> _vehicleTint = new Dictionary<VehicleKind, Color>();
+        // Arte gerada (Resources/Art); nulos = usa a arte geométrica
+        private SpriteRenderer _art, _vehicleArt;
+        private bool _useArt;
+        private float _animTime;
 
         public void Bind(RunDriver driver, Transform onFoot, SpriteRenderer body, ParticleSystem jet, Sprite square)
         {
@@ -42,7 +46,20 @@ namespace Propulsor.Gameplay
             _pointer = MakeSprite("Ponteiro", _vehicleRoot, square, 14).transform;
             _pointer.GetComponent<SpriteRenderer>().color = new Color32(0xFF, 0xD2, 0x3F, 255);
             _vehicleRoot.gameObject.SetActive(false);
+
+            _useArt = SpriteLibrary.Get("Nina_run") != null;
+            if (_useArt)
+            {
+                _art = MakeSprite("NinaArte", transform, null, 10);
+                _vehicleArt = MakeSprite("VeiculoArte", _vehicleRoot, null, 12);
+                // O jato passa a sair da mochila desenhada na folha.
+                _jet.transform.SetParent(transform, false);
+                _jet.transform.localPosition = new Vector3(-0.45f, 0.5f, 0f);
+                foreach (var r in _onFoot.GetComponentsInChildren<SpriteRenderer>(true)) r.enabled = false;
+            }
         }
+
+        private SpriteLibrary.Anim A(string name) => SpriteLibrary.Get(name);
 
         /// <summary>Aplica roupa, acessório, propulsor e pinturas equipados (cosméticos).</summary>
         public void ApplyAppearance(Inventory inv)
@@ -104,6 +121,8 @@ namespace Propulsor.Gameplay
             bool visible = !sim.IsInvulnerable || Mathf.Repeat(Time.time * 8f, 1f) < 0.5f;
 
             var vehicle = sim.Vehicle;
+            _animTime += Time.deltaTime;
+            if (_art != null) _art.enabled = vehicle == null && visible;
             _onFoot.gameObject.SetActive(vehicle == null && visible);
             _vehicleRoot.gameObject.SetActive(vehicle != null && visible);
 
@@ -116,6 +135,23 @@ namespace Propulsor.Gameplay
         {
             var emission = _jet.emission;
             emission.enabled = m.State == MotorState.Thrusting;
+            if (_useArt)
+            {
+                string pose = m.State switch
+                {
+                    MotorState.Grounded => "Nina_run",
+                    MotorState.Thrusting => m.VelocityY > 2f ? "Nina_rise" : "Nina_fly",
+                    MotorState.Falling => m.VelocityY < -3f ? "Nina_fall" : "Nina_fly",
+                    MotorState.Dead => "Nina_tumble",
+                    _ => "Nina_down"
+                };
+                var anim = A(pose) ?? A("Nina_run");
+                // corrida acompanha a velocidade; demais poses no ritmo da folha
+                float speed = m.State == MotorState.Grounded ? Mathf.Max(0.6f, m.VelocityX / 8f) : 1f;
+                _art.sprite = anim.Frame(_animTime * speed);
+                _art.transform.localRotation = Quaternion.Euler(0f, 0f, m.State == MotorState.Thrusting || m.State == MotorState.Falling ? m.VelocityY * 0.8f : 0f);
+                return;
+            }
             var t = _body.transform;
             switch (m.State)
             {
@@ -143,6 +179,22 @@ namespace Propulsor.Gameplay
         {
             var emission = _jet.emission;
             emission.enabled = false;
+
+            if (_vehicleArt != null)
+            {
+                var va = A("Vehicle_" + ArtKey(v.Kind));
+                if (va != null)
+                {
+                    _vehicleBody.enabled = _vehicleCockpit.enabled = false;
+                    _vehicleArt.enabled = true;
+                    _vehicleArt.sprite = va.Frame(_animTime);
+                    _vehicleArt.color = _vehicleTint.TryGetValue(v.Kind, out var tint) ? Color.Lerp(Color.white, tint, 0.5f) : Color.white;
+                    _vehicleArt.transform.localRotation = Quaternion.Euler(0f, 0f, -v.VelocityY * 1.5f);
+                    _vehicleRoot.localScale = v is FlipSuitMotor fs && fs.GravitySign > 0 ? new Vector3(1f, -1f, 1f) : Vector3.one;
+                    _pointer.gameObject.SetActive(false);
+                    return;
+                }
+            }
 
             if (_shownVehicle != v.Kind)
             {
@@ -189,6 +241,14 @@ namespace Propulsor.Gameplay
                 _vehicleBody.color = Color.Lerp(new Color32(0x55, 0x55, 0x66, 255), BodyColorFor(v.Kind),
                                                 v.HitPoints / (float)HeavyRigMotor.MaxHitPoints);
         }
+
+        /// <summary>Nome do veículo nas folhas geradas (Vehicle_&lt;chave&gt;).</summary>
+        public static string ArtKey(VehicleKind k) => k switch
+        {
+            VehicleKind.Mech => "mech", VehicleKind.FlapDrone => "drone", VehicleKind.BlinkPod => "blink",
+            VehicleKind.RailBike => "bike", VehicleKind.SkySerpent => "serpent", VehicleKind.FlipSuit => "flip",
+            VehicleKind.SplashSki => "ski", _ => "rig"
+        };
 
         public static Color VehicleColor(VehicleKind k) => k switch
         {

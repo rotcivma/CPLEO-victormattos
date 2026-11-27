@@ -750,7 +750,16 @@
     }
   }
 
+  /** Um bloco isolado de camada (para gerar sprites): layer "far" (10 u) ou "mid" (7 u). Retorna canvas. */
+  function tile(layer, i, sector, ppu) {
+    const S = SECTORS[sector], TW = layer === "far" ? 10 : 7;
+    cache.clear(); cachePPU = ppu;
+    return tileCanvas(`${layer}:${i}:${S.name}:bake`, TW, ppu, (c, anims) => (layer === "far" ? farTile(c, i, S) : midTile(c, i, S, anims))).cv;
+  }
+  function midVariant(i) { return Math.floor(hash(i, 7) * MID_VARIANTS); }
+
   global.PropulsorArt = {
+    tile, midVariant,
     nina, head, jetpack, background, floorCeiling, zapper, laserEmitter, laserBeam, rocket, warningBadge,
     nut, token, crate, worker, vehicle, explosion, smoke, icon, burst, SECTORS, sectorAt, shade, alpha,
   };

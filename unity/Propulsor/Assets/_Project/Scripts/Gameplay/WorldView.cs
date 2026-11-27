@@ -25,7 +25,11 @@ namespace Propulsor.Gameplay
         private Camera _cam;
         private Sprite _square, _circle;
 
-        private sealed class ZapperGo { public Transform Root, Beam, CoilA, CoilB; public SpriteRenderer BeamSr; }
+        private sealed class ZapperGo { public Transform Root, Beam, CoilA, CoilB; public SpriteRenderer BeamSr, GlowA, GlowB; }
+
+        // Arte gerada (Resources/Art). Nulo = arte geométrica.
+        private static SpriteLibrary.Anim Art(string name) => SpriteLibrary.Get(name);
+        private float _artTime;
 
         private readonly Dictionary<long, ZapperGo> _zappers = new Dictionary<long, ZapperGo>();
         private readonly Stack<ZapperGo> _zapperPool = new Stack<ZapperGo>();
@@ -156,6 +160,16 @@ namespace Propulsor.Gameplay
                 go.Body.transform.localPosition = new Vector3(0f, bob, 0f);
                 go.Visor.transform.localPosition = new Vector3(0.12f * w.Dir, 0.25f + bob, 0f);
                 go.Visor.color = w.Knocked ? Danger : Gold;
+                var wk = Art(w.Knocked ? "Worker_knocked" : "Worker_walk");
+                if (wk != null)
+                {
+                    go.Visor.enabled = false;
+                    go.Body.sprite = wk.Frame(_artTime + w.Id * 0.17f);
+                    go.Body.color = Color.white;
+                    go.Body.transform.localScale = new Vector3(w.Dir, 1f, 1f);
+                    go.Body.transform.localPosition = new Vector3(0f, w.Knocked ? 0f : -Worker.Height * 0.5f, 0f);
+                    go.Root.rotation = Quaternion.identity; // a folha "knocked" já gira
+                }
             }
             _removeInt.Clear();
             foreach (var k in _workers.Keys) if (!_seenInt.Contains(k)) _removeInt.Add(k);
@@ -184,6 +198,7 @@ namespace Propulsor.Gameplay
         {
             if (_driver == null || _driver.Sim == null) return;
             var sim = _driver.Sim;
+            _artTime += Time.deltaTime;
             float halfH = _cam.orthographicSize;
             float halfW = halfH * _cam.aspect;
             float camX = _cam.transform.position.x;
@@ -220,6 +235,28 @@ namespace Propulsor.Gameplay
                     float flicker = 0.35f + 0.15f * Mathf.PerlinNoise(Time.time * 20f, i);
                     go.Beam.localScale = new Vector3(z.Length, flicker, 1f);
                     go.BeamSr.color = z.IsRotating ? Color.Lerp(Electric, Accent, 0.5f) : Electric;
+                    var arc = Art("Zapper_Arc");
+                    if (arc != null)
+                    {
+                        // folha do arco tem 3 u de comprimento com pivô na ponta esquerda
+                        go.BeamSr.sprite = arc.Frame(_artTime + i * 0.13f);
+                        go.Beam.position = a;
+                        go.Beam.localScale = new Vector3(z.Length / 3f, 1f, 1f);
+                        var coil = Art("Zapper_Coil"); var glow = Art("Zapper_Glow");
+                        foreach (var c in new[] { go.CoilA, go.CoilB })
+                        {
+                            var csr = c.GetComponent<SpriteRenderer>();
+                            csr.sprite = coil.Frame(0f); csr.color = Color.white; c.localScale = Vector3.one;
+                        }
+                        if (go.GlowA == null)
+                        {
+                            go.GlowA = NewSprite("BrilhoA", _circle, Color.white, 8, go.CoilA);
+                            go.GlowB = NewSprite("BrilhoB", _circle, Color.white, 8, go.CoilB);
+                        }
+                        go.GlowA.sprite = glow.Frame(_artTime); go.GlowB.sprite = glow.Frame(_artTime + .3f);
+                        go.GlowA.color = go.GlowB.color = z.IsRotating ? new Color(1f, .75f, .45f) : Color.white;
+                        go.BeamSr.color = z.IsRotating ? new Color(1f, .8f, .5f) : Color.white;
+                    }
                 }
             }
             _removeLong.Clear();
@@ -260,6 +297,14 @@ namespace Propulsor.Gameplay
                 sr.transform.localScale = new Vector3(size * pulse * (p.Kind == PickupKind.Coin ? Mathf.Abs(Mathf.Cos(Time.time * 4f + p.X)) * 0.6f + 0.4f : 1f),
                                                       size * pulse, 1f);
                 if (p.Kind == PickupKind.VehicleToken) sr.transform.rotation = Quaternion.Euler(0f, 0f, Time.time * 90f);
+                var pa = Art(p.Kind == PickupKind.Coin ? "Nut" : p.Kind == PickupKind.Token ? "Token" : "VehicleCrate");
+                if (pa != null)
+                {
+                    sr.sprite = pa.Frame(_artTime + p.X * 0.1f);
+                    sr.color = Color.white;
+                    sr.transform.localScale = Vector3.one;
+                    sr.transform.rotation = Quaternion.identity;
+                }
             }
             _removeInt.Clear();
             foreach (var k in _pickups.Keys) if (!_seenInt.Contains(k)) _removeInt.Add(k);
@@ -309,6 +354,17 @@ namespace Propulsor.Gameplay
                     var right = Emitter(i * 2 + 1);
                     left.transform.position = new Vector3(camX - halfW + inset, emitterRows[i], 0f);
                     right.transform.position = new Vector3(camX + halfW - inset, emitterRows[i], 0f);
+                    var le = Art("Laser_Emitter");
+                    if (le != null)
+                    {
+                        int f = laser.Phase == LaserPhase.Firing ? 2 : laser.Phase == LaserPhase.Warning ? 1 : 0;
+                        foreach (var e in new[] { left, right })
+                        {
+                            e.sprite = le.Frames[Mathf.Min(f, le.Frames.Length - 1)];
+                            e.color = Color.white; e.transform.localScale = Vector3.one;
+                        }
+                        left.flipX = false; right.flipX = true;
+                    }
                 }
                 rowCount = emitterRows.Length;
 
@@ -321,6 +377,14 @@ namespace Propulsor.Gameplay
                     beam.color = new Color(Danger.r, Danger.g, Danger.b, alpha);
                     beam.transform.position = new Vector3(camX, rows[i], 0f);
                     beam.transform.localScale = new Vector3(halfW * 2f, thickness, 1f);
+                    var lb = Art("Laser_Beam");
+                    if (lb != null)
+                    {
+                        beam.sprite = lb.Frame(_artTime);
+                        beam.color = firing ? Color.white : new Color(1f, 1f, 1f, alpha);
+                        beam.transform.position = new Vector3(camX - halfW, rows[i], 0f); // folha com pivô à esquerda, 2 u
+                        beam.transform.localScale = new Vector3(halfW, firing ? 1f : 0.12f, 1f);
+                    }
                 }
                 for (int i = rows.Length; i < _laserBeams.Count; i++) _laserBeams[i].gameObject.SetActive(false);
             }
@@ -364,6 +428,8 @@ namespace Propulsor.Gameplay
                     body.sprite = _square;
                     body.transform.position = new Vector3(m.X, m.Y, 0f);
                     body.transform.localScale = new Vector3(Missile.Width, Missile.Height, 1f);
+                    var ra = Art("Rocket");
+                    if (ra != null) { body.sprite = ra.Frame(_artTime); body.color = Color.white; body.transform.localScale = Vector3.one; }
                 }
                 else if (m.IsWarning)
                 {
@@ -373,6 +439,8 @@ namespace Propulsor.Gameplay
                     w.enabled = Mathf.Repeat(Time.time * hz, 1f) < 0.6f;
                     w.transform.position = new Vector3(camX + halfW - 0.7f, m.Y, 0f);
                     w.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+                    var wa = Art(m.Phase == MissilePhase.Locked ? "Warning_Locked" : "Warning");
+                    if (wa != null) { w.sprite = wa.Frame(_artTime); w.color = Color.white; w.enabled = true; w.transform.localScale = Vector3.one; }
                 }
             }
             Prune(_missiles);

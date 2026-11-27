@@ -20,6 +20,18 @@ namespace Propulsor.Gameplay
         private const float MarkerSpacing = 10f;
         private const float Parallax = 0.5f; // pilares do fundo movem-se a 50 % da velocidade
 
+        // ---- arte gerada: blocos de parallax por setor (Resources/Art/Backgrounds/Tiles) ----
+        private static readonly string[] Sectors = { "Montagem", "Caldeiras", "Testes", "Deposito" };
+        private const float SectorLength = 400f;
+        private sealed class TileLayer
+        {
+            public string Prefix; public float Width, K; public int PerSector, Order;
+            public readonly System.Collections.Generic.List<SpriteRenderer> Pool = new System.Collections.Generic.List<SpriteRenderer>();
+        }
+        private TileLayer[] _layers;
+        private SpriteRenderer[] _floorBand, _ceilBand;
+        private bool _useTiles;
+
         public void Build(Transform cameraTransform, float floorY, float ceilingY, Sprite square, Font font)
         {
             _cam = cameraTransform;
@@ -33,6 +45,22 @@ namespace Propulsor.Gameplay
             _pillars = new Transform[12];
             for (int i = 0; i < _pillars.Length; i++)
                 _pillars[i] = MakeQuad("Pilar" + i, square, new Color32(0x3A, 0x41, 0x80, 255), -10);
+
+            _useTiles = SpriteLibrary.Tile("Floor") != null && SpriteLibrary.Tile("Far_Montagem_0") != null;
+            if (_useTiles)
+            {
+                _backWall.gameObject.SetActive(false);
+                _floor.gameObject.SetActive(false);
+                _ceiling.gameObject.SetActive(false);
+                foreach (var pl in _pillars) pl.gameObject.SetActive(false);
+                _layers = new[]
+                {
+                    new TileLayer { Prefix = "Far", Width = 10f, K = .22f, PerSector = 4, Order = -30 },
+                    new TileLayer { Prefix = "Mid", Width = 7f, K = .55f, PerSector = 6, Order = -25 },
+                };
+                _floorBand = Band("Chao", "Floor", 6);
+                _ceilBand = Band("Teto", "Ceiling", 6);
+            }
 
             _markers = new Transform[8];
             _markerLabels = new TextMesh[_markers.Length];
@@ -50,6 +78,56 @@ namespace Propulsor.Gameplay
                 tm.fontSize = 48;
                 tm.color = new Color32(0xF6, 0xF7, 0xFB, 255);
                 _markerLabels[i] = tm;
+            }
+        }
+
+        private SpriteRenderer[] Band(string name, string tile, int order)
+        {
+            var arr = new SpriteRenderer[4];
+            for (int i = 0; i < arr.Length; i++)
+            {
+                var sr = MakeQuad(name + i, SpriteLibrary.Tile(tile), Color.white, order).GetComponent<SpriteRenderer>();
+                arr[i] = sr;
+            }
+            return arr;
+        }
+
+        private static int Sector(float x) => ((int)Mathf.Floor(x / SectorLength) % 4 + 4) % 4;
+
+        private void LateUpdateTiles(float camX, float halfW)
+        {
+            float viewW = halfW * 2f;
+            foreach (var L in _layers)
+            {
+                float layerX = camX * L.K;
+                int i0 = Mathf.FloorToInt((layerX - halfW) / L.Width) - 1;
+                int count = Mathf.CeilToInt(viewW / L.Width) + 3;
+                while (L.Pool.Count < count) L.Pool.Add(MakeQuad(L.Prefix + L.Pool.Count, null, Color.white, L.Order).GetComponent<SpriteRenderer>());
+                for (int k = 0; k < L.Pool.Count; k++)
+                {
+                    int i = i0 + k;
+                    var sr = L.Pool[k];
+                    if (k >= count) { sr.enabled = false; continue; }
+                    int variant = ((i * 7919) % L.PerSector + L.PerSector) % L.PerSector;
+                    sr.sprite = SpriteLibrary.Tile($"{L.Prefix}_{Sectors[Sector(i * L.Width / L.K)]}_{variant}");
+                    sr.enabled = sr.sprite != null;
+                    // bloco com pivô no canto inferior esquerdo, base em y = -1
+                    sr.transform.position = new Vector3(i * L.Width + camX * (1f - L.K), _floorY - 1f, 0f);
+                    sr.transform.localScale = Vector3.one;
+                }
+            }
+            PlaceBand(_floorBand, camX, halfW, -1.5f);
+            PlaceBand(_ceilBand, camX, halfW, 6.75f);
+        }
+
+        private static void PlaceBand(SpriteRenderer[] band, float camX, float halfW, float y)
+        {
+            const float w = 18f;
+            float start = Mathf.Floor((camX - halfW) / w) * w;
+            for (int k = 0; k < band.Length; k++)
+            {
+                band[k].transform.position = new Vector3(start + k * w, y, 0f);
+                band[k].transform.localScale = Vector3.one;
             }
         }
 
@@ -72,6 +150,7 @@ namespace Propulsor.Gameplay
             float camX = _cam.position.x;
             float width = halfW * 2f + 4f;
 
+            if (_useTiles) LateUpdateTiles(camX, halfW);
             Place(_backWall, camX, (_floorY + _ceilingY) * 0.5f, width, _ceilingY - _floorY);
             Place(_floor, camX, _floorY - 1f, width, 2f);
             Place(_ceiling, camX, _ceilingY + 1f, width, 2f);
