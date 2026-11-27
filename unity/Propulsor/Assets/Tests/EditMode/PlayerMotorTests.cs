@@ -143,7 +143,7 @@ namespace Propulsor.Tests.EditMode
             m.Reset(100f, 0f);
             Assert.AreEqual(0f, m.Distance, 1e-5);
             Run(m, 1f, false);
-            Assert.AreEqual(p.StartSpeed, m.Distance, 0.05f);
+            Assert.AreEqual(p.StartSpeed + 0.5f * p.HorizontalAcceleration, m.Distance, 0.05f); // d = v0·t + a·t²/2
         }
 
         [Test]

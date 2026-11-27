@@ -18,8 +18,8 @@ namespace Propulsor.Core.Physics
 
         /// <summary>Velocidade horizontal no início da corrida (u/s).</summary>
         public float StartSpeed = 8f;
-        /// <summary>Aceleração horizontal contínua (u/s²).</summary>
-        public float HorizontalAcceleration = 0.05f;
+        /// <summary>Aceleração horizontal contínua (u/s²): 8 → 20 u/s em ~90 s (v2, antes 0,05 = 4 min).</summary>
+        public float HorizontalAcceleration = 0.13f;
         /// <summary>Velocidade horizontal máxima (u/s).</summary>
         public float MaxSpeed = 20f;
 

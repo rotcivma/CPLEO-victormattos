@@ -23,6 +23,8 @@ namespace Propulsor.Core.Gameplay
         public bool MissilesEnabled = true;
         /// <summary>Trecho inicial vazio (u).</summary>
         public float StartBuffer = 20f;
+        /// <summary>Até esta distância (m) só entram trechos sem perigos — aprender o controle (v2).</summary>
+        public float SafeStartDistance = 150f;
         public float SpawnAhead = 60f;
         public float CullBehind = 25f;
         public float InvulnerableAfterVehicle = 1.0f;
@@ -284,7 +286,7 @@ namespace Propulsor.Core.Gameplay
             while (_nextSegmentX < aheadLimit)
             {
                 float startDistance = _nextSegmentX - (Motor.X - Motor.Distance);
-                var def = _selector.Next(startDistance);
+                var def = _selector.Next(startDistance, startDistance < Config.SafeStartDistance);
                 var placed = _segmentPool.Count > 0 ? _segmentPool.Pop() : new PlacedSegment();
                 placed.Id = _nextId++;
                 placed.Def = def;

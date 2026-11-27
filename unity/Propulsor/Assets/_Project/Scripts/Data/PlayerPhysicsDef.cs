@@ -19,7 +19,7 @@ namespace Propulsor.Data
 
         [Header("Horizontal")]
         public float startSpeed = 8f;
-        public float horizontalAcceleration = 0.05f;
+        public float horizontalAcceleration = 0.13f;
         public float maxSpeed = 20f;
 
         [Header("Corredor")]

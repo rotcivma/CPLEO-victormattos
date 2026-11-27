@@ -24,7 +24,18 @@ namespace Propulsor.Core.Gameplay
             _rng = rng ?? throw new ArgumentNullException(nameof(rng));
         }
 
-        public SegmentDef Next(float distance)
+        /// <param name="safeOnly">Só trechos sem arcos nem feixes (início da corrida). Se não houver nenhum, ignora a regra.</param>
+        public SegmentDef Next(float distance, bool safeOnly = false)
+        {
+            if (safeOnly)
+            {
+                var safe = Pick(distance, true);
+                if (safe != null) return Remember(safe);
+            }
+            return Remember(Pick(distance, false) ?? _segments[0]);
+        }
+
+        private SegmentDef Pick(float distance, bool safeOnly)
         {
             _candidates.Clear();
             _weights.Clear();
@@ -33,29 +44,25 @@ namespace Propulsor.Core.Gameplay
             {
                 var s = _segments[i];
                 if (s.MinDistance > distance || _recent.Contains(s.Id)) continue;
+                if (safeOnly && (s.Zappers.Count > 0 || s.HasLasers)) continue;
                 float w = s.BaseWeight * Difficulty.SegmentAffinity(s.Difficulty, distance);
                 _candidates.Add(s);
                 _weights.Add(w);
                 total += w;
             }
 
-            SegmentDef chosen;
-            if (_candidates.Count == 0)
+            if (_candidates.Count == 0) return null;
+            float r = _rng.NextFloat() * total;
+            for (int i = 0; i < _candidates.Count; i++)
             {
-                // Biblioteca pequena demais para a janela: relaxa a regra de repetição.
-                chosen = _segments[0];
+                r -= _weights[i];
+                if (r < 0f) return _candidates[i];
             }
-            else
-            {
-                float r = _rng.NextFloat() * total;
-                chosen = _candidates[_candidates.Count - 1];
-                for (int i = 0; i < _candidates.Count; i++)
-                {
-                    r -= _weights[i];
-                    if (r < 0f) { chosen = _candidates[i]; break; }
-                }
-            }
+            return _candidates[_candidates.Count - 1];
+        }
 
+        private SegmentDef Remember(SegmentDef chosen)
+        {
             _recent.Enqueue(chosen.Id);
             while (_recent.Count > NoRepeatWindow) _recent.Dequeue();
             return chosen;

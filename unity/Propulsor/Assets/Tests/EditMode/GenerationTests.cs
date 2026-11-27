@@ -133,3 +133,30 @@ namespace Propulsor.Tests.EditMode
         }
     }
 }
+
+namespace Propulsor.Tests.EditMode
+{
+    public class SafeStartTests
+    {
+        [Test] // v2: início sem perigos
+        public void Primeiros150m_SoTrechosSemPerigo()
+        {
+            var s = new Propulsor.Core.Gameplay.RunSimulation(new Propulsor.Core.Gameplay.RunConfig(), 9);
+            foreach (var seg in s.Segments)
+            {
+                if (seg.StartX >= 150f) continue;
+                Assert.AreEqual(0, seg.Def.Zappers.Count, seg.Def.Id);
+                Assert.IsFalse(seg.Def.HasLasers, seg.Def.Id);
+            }
+        }
+
+        [Test]
+        public void SemTrechoSeguro_UsaQualquerUm()
+        {
+            var only = new System.Collections.Generic.List<Propulsor.Core.Gameplay.SegmentDef>
+                { new Propulsor.Core.Gameplay.SegmentDef("parede", 20f, 0f).Zap(10f, 3.5f, 7f, 90f) };
+            var sel = new Propulsor.Core.Gameplay.SegmentSelector(only, new Propulsor.Core.Gameplay.XorShiftRandom(1));
+            Assert.AreEqual("parede", sel.Next(0f, safeOnly: true).Id);
+        }
+    }
+}

@@ -387,7 +387,7 @@ namespace Propulsor.Tests.EditMode
             cfg.Segments = new List<SegmentDef> { seg };
             cfg = RunModifiers.Apply(cfg, new ItemDef[0], doubleCoins: true, headStart: false);
             var s = new RunSimulation(cfg, 1);
-            for (int i = 0; i < 250; i++) s.Step(0.02f, false, false);
+            while (s.Motor.X < 39f) s.Step(0.02f, false, false); // só o 1º trecho (x 20–40)
             Assert.AreEqual(10, s.RunCoins);
         }
 

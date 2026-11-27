@@ -94,7 +94,7 @@ namespace Propulsor.Tests.EditMode
             var s = new RunSimulation(Only(seg), 1);
             int events = 0;
             s.Bus.Subscribe<CoinCollected>(e => { events++; Assert.AreEqual(1, e.Value); });
-            Run(s, 5f, false); // anda no chão (início do trecho em x=20), pega a linha
+            while (s.Motor.X < 39f) s.Step(Dt, false, false); // só o 1º trecho (x 20–40)
             Assert.AreEqual(10, s.RunCoins);
             Assert.AreEqual(10, events);
         }
@@ -115,7 +115,7 @@ namespace Propulsor.Tests.EditMode
             var cfg = Only(seg);
             cfg.CoinValue = 2;
             var s = new RunSimulation(cfg, 1);
-            Run(s, 5f, false);
+            while (s.Motor.X < 39f) s.Step(Dt, false, false); // só o 1º trecho (x 20–40)
             Assert.AreEqual(10, s.RunCoins);
         }
 
