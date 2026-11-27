@@ -1,5 +1,7 @@
 # Engenharia reversa funcional — runner de jetpack (referência: Jetpack Joyride)
 
+> **Comece por [ENTREGA-FINAL.md](ENTREGA-FINAL.md).**
+
 Este diretório reúne a documentação do projeto de engenharia reversa **funcional**
 do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
 
@@ -53,7 +55,7 @@ do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
 | 7 | [fase-7/00-relatorio-fase-7.md](fase-7/00-relatorio-fase-7.md) — menus e fluxo de telas | ✅ lógica testada (109) · ⏳ validação no Unity |
 | 8 | [fase-8/00-relatorio-fase-8.md](fase-8/00-relatorio-fase-8.md) — economia, Oficina, gadgets, missões, patentes, conquistas, salvamento | ✅ lógica testada (161) · ⏳ validação no Unity |
 | 9 | [fase-9/00-relatorio-fase-9.md](fase-9/00-relatorio-fase-9.md) — desempenho, robôs operários, raspão, áudio sintetizado, fontes, efeitos | ✅ lógica testada (177) · ⏳ validação no Unity |
-| 10 | Entrega final | ⏳ |
+| 10 | [ENTREGA-FINAL.md](ENTREGA-FINAL.md) — mapa dos 15 entregáveis · [ROTEIRO-VALIDACAO.md](ROTEIRO-VALIDACAO.md) — validação no Unity | ✅ |
 
 > Nota: o arquivo `cp1leoo.txt` na raiz do repositório é um código C# não
 > relacionado a este projeto (Azure Function de verificação de portas) e foi

@@ -1,4 +1,4 @@
-# PROPULSOR — protótipo Unity (Fases 5–9)
+# PROPULSOR — protótipo Unity (Fases 5–10)
 
 Jogo original do gênero "runner com propulsor". Ver `docs/` para toda a
 investigação, arquitetura e planos.
@@ -35,6 +35,17 @@ Para começar do zero: ⚙ ▸ **Apagar todo o progresso** (toque duas vezes).
 *Assets ▸ Create ▸ Propulsor ▸ Player Physics*, salve como
 `Assets/Resources/PlayerPhysics.asset`. O bootstrap carrega esse asset; com
 *Live Tuning* ligado no `RunDriver`, mudanças no Inspector valem durante o Play.
+
+## Builds
+Menu **Propulsor** no editor:
+- *Preparar projeto*: cria a cena principal e ajusta orientação e nome.
+- *Build Android (APK)* e *Build WebGL*: saída em `unity/Propulsor/Builds/`.
+
+Pela linha de comando:
+```
+Unity -batchmode -quit -projectPath unity/Propulsor -executeMethod Propulsor.EditorTools.BuildScript.BuildAndroid
+```
+Roteiro completo de validação: `docs/ROTEIRO-VALIDACAO.md`.
 
 ## Testes
 | Conjunto | Como rodar | Onde |
