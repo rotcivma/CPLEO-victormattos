@@ -71,11 +71,22 @@
     jet_padrao: { tank: "#e23a3a", trim: "#ffcc4d", flame: ["#fff6c2", "#ffcc4d", "#ff7a1a"] },
     jet_bolhas: { tank: "#5fd3e0", trim: "#ffffff", flame: ["#ffffff", "#bff6ff", "#5fd3e0"] },
     jet_confete:{ tank: "#9b5cff", trim: "#ff9f1c", flame: ["#ffffff", "#ff9f1c", "#ff4fa3"] },
+    jet_vapor:  { tank: "#c97a3a", trim: "#a8aec9", flame: ["#ffffff", "#e9edf7", "#a8aec9"] },
   };
 
   function jetpack(c, id, t, thrust) {
+    if (id === "none") return;
     const J = JETS[id] || JETS.jet_padrao;
-    if (id === "jet_bolhas") {
+    if (id === "jet_vapor") {
+      // caldeira de cobre com chaminé e volante de válvula
+      c.beginPath(); c.moveTo(-.6, -.55); c.lineTo(-.3, -.55); c.quadraticCurveTo(-.26, -.1, -.45, -.08); c.quadraticCurveTo(-.64, -.1, -.6, -.55); c.closePath();
+      cel(c, J.tank, -.62, -.55, .36, .47);
+      for (const yy of [-.45, -.3]) { c.fillStyle = shade(J.tank, -.3); c.fillRect(-.6, yy, .3, .03); }
+      rr(c, -.42, -.78, .08, .25, .02); cel(c, "#5b6585", -.42, -.78, .08, .25, { lw: .03 });            // chaminé
+      c.beginPath(); c.arc(-.52, -.28, .07, 0, TAU); c.lineWidth = .025; c.strokeStyle = "#e71d36"; c.stroke(); // volante
+      c.beginPath(); c.moveTo(-.59, -.28); c.lineTo(-.45, -.28); c.moveTo(-.52, -.35); c.lineTo(-.52, -.21); c.stroke();
+      if (thrust) for (let k = 0; k < 3; k++) { const ph = (t * 2 + k / 3) % 1; c.beginPath(); c.arc(-.38 - ph * .2, -.8 - ph * .35, .05 + ph * .1, 0, TAU); c.fillStyle = `rgba(233,237,247,${.8 * (1 - ph)})`; c.fill(); }
+    } else if (id === "jet_bolhas") {
       for (const dx of [-.5, -.34]) { rr(c, dx - .07, -.62, .14, .5, .07); c.fillStyle = alpha(J.tank, .85); c.fill(); ink(c, .035);
         c.beginPath(); c.arc(dx, -.5 + .1 * Math.sin(t * 6 + dx * 9), .03, 0, TAU); c.fillStyle = "#fff"; c.fill(); }
       c.beginPath(); c.arc(-.42, -.08, .07, 0, TAU); c.lineWidth = .035; c.strokeStyle = J.trim; c.stroke();
@@ -128,7 +139,9 @@
       } else if (pose === "hit" || pose === "tumble") {
         hip = .8; knee = .2; hipB = -.8; kneeB = .2; sh = -2.2; el = .2; shB = 2.2; elB = -.2; face = "shock";
       } else if (pose === "down") { hip = .1; knee = .1; hipB = -.1; kneeB = .2; sh = -2.9; el = .2; shB = -2.6; elB = .1; face = "ko"; }
-      c.rotate(rot + lean);
+      // giro em torno do meio do corpo (spinAbout = altura do centro), e não dos pés
+      const piv = o.spinAbout || 0;
+      c.translate(0, -piv); c.rotate(rot + lean); c.translate(0, piv);
       c.translate(0, -bob);
       // sombra no chão (só em pé)
       // perna de trás + braço de trás (tons escuros)

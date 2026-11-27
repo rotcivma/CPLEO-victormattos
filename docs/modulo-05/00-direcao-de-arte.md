@@ -35,13 +35,13 @@
 ## 4. Catálogo de recursos gerados
 | Categoria | Arquivos | Detalhe |
 |---|---|---|
-| Characters | `Nina_{idle,run,fly,rise,fall,hit,tumble,down}`, `Worker_{walk,knocked}` | 8 animações da personagem pedidas no módulo (parada, correndo, voando, subindo, descendo, colisão, lançada, morte) |
+| Characters | Nina em **3 camadas** × 8 poses: `Nina_<pose>_<roupa>` (4 roupas), `NinaJet_<pose>_<propulsor>` (4 propulsores, com chama), `NinaHat_<pose>_<acessório>` (capacete, boné); `Worker_{walk,knocked}` | As 8 animações pedidas no módulo (parada, correndo, voando, subindo, descendo, colisão, lançada, morte), em todas as combinações de visual |
 | Vehicles | `Vehicle_{mech,drone,blink,bike,serpent,flip,ski,rig}` | 8 quadros de movimento cada; entrada (escala com brilho) e destruição (destroços + explosão) são animadas em código |
-| Jetpacks | `jet_padrao`, `jet_bolhas`, `jet_confete` | Formas diferentes (extintor, tanques de bolha, canhão de confete), não só troca de cor |
+| Jetpacks | `jet_padrao`, `jet_bolhas`, `jet_confete`, `jet_vapor` | Formas diferentes (extintor, tanques de bolha, canhão de confete, caldeira de cobre com chaminé), não só troca de cor |
 | Obstacles | `Zapper_{Coil,Glow,Arc}`, `Laser_{Emitter,Beam}`, `Rocket`, `Warning`, `Warning_Locked` | Emissor com 3 estados (desligado/aviso/disparo) |
 | Pickups | `Nut`, `Token`, `VehicleCrate` | Porca com giro em 8 quadros |
 | Particles | `Explosion` (10 q.), `Smoke`, `Burst` | — |
-| Icons | 18 itens × 3 estados (`_locked`, `_owned`, `_equipped`), 256 px | Bloqueado: cinza + cadeado; equipado: selo verde |
+| Icons | 19 itens × 3 estados (`_locked`, `_owned`, `_equipped`), 256 px | Bloqueado: cinza + cadeado; equipado: selo verde |
 | Backgrounds | `Tiles/Far_<setor>_0..3`, `Tiles/Mid_<setor>_0..5`, `Tiles/Floor`, `Tiles/Ceiling`, `Setor_<nome>` | Blocos que emendam sem corte; 2 camadas de parallax (0,22 e 0,55) |
 
 Todos os arquivos são PNG com transparência e quadros em faixa horizontal. O `manifest.json` informa, para cada folha:
@@ -52,7 +52,7 @@ Todos os arquivos são PNG com transparência e quadros em faixa horizontal. O `
 No Unity:
 - **`SpriteLibrary`** fatia as folhas em tempo de execução.
 - **`ArtImportSettings`** configura a importação sem redimensionar.
-- **`PlayerView`, `WorldView` e `CorridorView`** usam os sprites quando existem e voltam para a arte geométrica se faltarem.
+- **`PlayerView`, `WorldView` e `CorridorView`** usam os sprites quando existem e voltam para a arte geométrica se faltarem. A `PlayerView` empilha as camadas da Nina conforme o que está equipado na Oficina.
 
 Para gerar tudo de novo depois de mudar a arte: `node web/tools/bake-sprites.js`.
 
@@ -68,7 +68,7 @@ Para gerar tudo de novo depois de mudar a arte: `node web/tools/bake-sprites.js`
 | Sem pixelização | ✅ na web (desenho vetorial na resolução da tela); Unity: folhas a 96–128 px/u | — |
 
 **Diferenças conhecidas e correções pendentes:**
-1. **Roupas no Unity:** as folhas foram geradas só com o macacão verde-água. As outras roupas só mudam de cor na versão web. *Correção:* gerar uma folha por roupa.
+1. ~~Roupas no Unity~~ — **resolvido**: a Nina é montada em 3 camadas (corpo por roupa + propulsor + acessório). Cada camada é extraída comparando os desenhos quadro a quadro, então encaixa exatamente na pose. Isso evitou gerar as 32 combinações completas (~13 MB → ~5 MB).
 2. **Arco elétrico no Unity:** é uma folha esticada pelo comprimento, então a espessura fica igual em arcos curtos e longos.
 3. **Arte procedural:** tem acabamento cartoon consistente, mas não é pintura à mão. Para um visual de nível comercial, o próximo passo é um artista redesenhar Nina e os veículos usando esta base como modelo de proporções e poses.
 4. **Ainda não validado no Unity**, porque não há Unity neste ambiente.

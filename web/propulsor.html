@@ -411,6 +411,7 @@ const ITEMS = [
   { id: "jet_padrao", cat: "Propulsores", name: "Extintor Clássico", desc: "O propulsor original da Nina.", price: 0, slot: "jet", c: ["#ffd23f", "#e71d36"], free: true },
   { id: "jet_bolhas", cat: "Propulsores", name: "Soprador de Bolhas", desc: "Bolhas em vez de fogo.", price: 2000, slot: "jet", c: ["#7df9ff", "#ffffff"] },
   { id: "jet_confete", cat: "Propulsores", name: "Canhão de Confete", desc: "Festa a cada impulso.", price: 3500, slot: "jet", c: ["#ff9f1c", "#b388ff"] },
+  { id: "jet_vapor", cat: "Propulsores", name: "Caldeira a Vapor", desc: "Nuvens brancas e muito barulho.", price: 5000, slot: "jet", c: ["#f6f7fb", "#a8aec9"] },
   { id: "macacao_verde", cat: "Visual", name: "Macacão Verde-água", desc: "Uniforme da oficina.", price: 0, slot: "outfit", c: ["#2ec4b6"], free: true },
   { id: "macacao_laranja", cat: "Visual", name: "Macacão Laranja", desc: "Para ser vista de longe.", price: 1500, slot: "outfit", c: ["#ff9f1c"] },
   { id: "macacao_roxo", cat: "Visual", name: "Macacão Roxo", desc: "Turno da noite.", price: 2500, slot: "outfit", c: ["#b388ff"] },
@@ -1219,7 +1220,7 @@ function render() {
       const pose = ninaPose();
       const rot = pose === "tumble" ? R.spin : pose === "down" ? -Math.PI / 2 : 0;
       const yy = pose === "down" ? R.y + .3 : R.y;
-      ART.nina(ctx, R.x, yy, { t, pose, phase: R.x * 2.3, outfit, hat: PF.eq.hat, jet: PF.eq.jet, vy: R.vy,
+      ART.nina(ctx, R.x, yy, { t, pose, phase: R.x * 2.3, outfit, hat: PF.eq.hat, jet: PF.eq.jet, vy: R.vy, spinAbout: pose === "tumble" ? .62 : 0,
         thrust: (R.st === "thrust" || R.head > 0) && state !== "menu", flash: R.flashT > 0 ? R.flashT * 2 : 0 }, rot);
       if (R.flashT > 0) ART.burst(ctx, R.x, R.y + .6, .9 * R.flashT * 2, "#7df9ff", R.t);
     }

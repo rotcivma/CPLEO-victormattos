@@ -16,17 +16,8 @@ const add = (cat, name, o) => SHEETS.push({ cat, name, ...o });
 const VEH = ['mech', 'drone', 'blink', 'bike', 'serpent', 'flip', 'ski', 'rig'];
 const VDIM = { mech: [1.4, 2], drone: [1.4, 1.2], blink: [1.2, 1.2], bike: [1.8, 1.2], serpent: [2, 1], flip: [.6, 1.1], ski: [1.8, .9], rig: [1.8, 1.8] };
 
-// ---- Personagem
-for (const [pose, frames, fps, extra] of [
-  ['idle', 8, 8, {}], ['run', 12, 14, {}], ['fly', 8, 12, { thrust: true }], ['rise', 8, 12, { thrust: true, vy: 9 }],
-  ['fall', 8, 12, { vy: -8 }], ['hit', 4, 12, {}], ['tumble', 12, 18, {}], ['down', 1, 1, {}]]) {
-  add('Characters', `Nina_${pose}`, { frames, fps, w: 2.2, h: 2.2, px: .5, py: .12, ppu: 128, args: { pose, extra } ,
-    draw: `(c, f, n, a) => { const p = a.pose === 'rise' ? 'fly' : a.pose; const t = f / n * (a.pose==='run'?0.5:1);
-      const rot = a.pose === 'tumble' ? f / n * Math.PI * 2 : a.pose === 'down' ? -Math.PI / 2 : 0;
-      PropulsorArt.nina(c, 0, a.pose === 'tumble' ? .6 : a.pose === 'down' ? .3 : 0, Object.assign({ t, pose: p, phase: f / n * Math.PI * 2, outfit: '#2ec4b6', jet: 'jet_padrao', vy: 0 }, a.extra), rot); }` });
-}
 // ---- Propulsores (mochila sozinha) e roupas
-for (const id of ['jet_padrao', 'jet_bolhas', 'jet_confete'])
+for (const id of ['jet_padrao', 'jet_bolhas', 'jet_confete', 'jet_vapor'])
   add('Jetpacks', id, { frames: 6, fps: 12, w: 1.2, h: 1.4, px: .7, py: .2, ppu: 128, args: { id },
     draw: `(c, f, n, a) => { c.save(); c.scale(1, -1); c.translate(.45, -.7); PropulsorArt.jetpack(c, a.id, f / n, true); c.restore(); }` });
 // ---- Veículos
@@ -87,8 +78,70 @@ async function main() {
     process.stdout.write('.');
   }
 
+  // ---- Nina em camadas: corpo por roupa + camada do propulsor + camada do acessório
+  const POSES = [['idle', 8, 8, {}], ['run', 12, 14, {}], ['fly', 8, 12, { thrust: true }], ['rise', 8, 12, { thrust: true, vy: 9 }],
+                 ['fall', 8, 12, { vy: -8 }], ['hit', 4, 12, {}], ['tumble', 12, 18, {}], ['down', 1, 1, {}]];
+  const OUTFITS = { macacao_verde: '#2ec4b6', macacao_laranja: '#ff9f1c', macacao_roxo: '#b388ff', macacao_dourado: '#ffd23f' };
+  const JETIDS = ['jet_padrao', 'jet_bolhas', 'jet_confete', 'jet_vapor'], HATS = ['capacete', 'bone'];
+  const NW = 2.2, NH = 2.2, NPX = .5, NPY = .12, NPPU = 128;
+  const fwN = Math.round(NW * NPPU), fhN = Math.round(NH * NPPU);
+  const renderNina = (pose, frames, extra, outfit, jet, hat, layerOf) => page.evaluate(({ pose, frames, extra, outfit, jet, hat, layerOf, fw, fh, ppu, px, py }) => {
+    const sheet = (o) => {
+      const cv = document.createElement('canvas'); cv.width = fw * frames; cv.height = fh; const c = cv.getContext('2d');
+      for (let f = 0; f < frames; f++) {
+        c.save(); c.beginPath(); c.rect(f * fw, 0, fw, fh); c.clip();
+        c.setTransform(ppu, 0, 0, -ppu, f * fw + px * fw, fh - py * fh);
+        const p = pose === 'rise' ? 'fly' : pose, t = f / frames * (pose === 'run' ? .5 : 1);
+        const rot = pose === 'tumble' ? f / frames * Math.PI * 2 : pose === 'down' ? -Math.PI / 2 : 0;
+        PropulsorArt.nina(c, 0, pose === 'down' ? .3 : 0,
+          Object.assign({ t, pose: p, phase: f / frames * Math.PI * 2, outfit: o.outfit, jet: o.jet, hat: o.hat, vy: 0, spinAbout: pose === 'tumble' ? .62 : 0 }, extra), rot);
+        c.restore();
+      }
+      return cv;
+    };
+    const full = sheet({ outfit, jet, hat });
+    if (!layerOf) return full.toDataURL('image/png');
+    // camada = pixels que mudam quando o item é acrescentado ao desenho de base
+    const base = sheet(layerOf);
+    const A = full.getContext('2d').getImageData(0, 0, full.width, full.height), B = base.getContext('2d').getImageData(0, 0, full.width, full.height);
+    const out = new ImageData(full.width, full.height);
+    for (let i = 0; i < A.data.length; i += 4) {
+      const d = Math.abs(A.data[i] - B.data[i]) + Math.abs(A.data[i + 1] - B.data[i + 1]) + Math.abs(A.data[i + 2] - B.data[i + 2]) + Math.abs(A.data[i + 3] - B.data[i + 3]);
+      if (d > 12) { out.data[i] = A.data[i]; out.data[i + 1] = A.data[i + 1]; out.data[i + 2] = A.data[i + 2]; out.data[i + 3] = A.data[i + 3]; }
+    }
+    const cv = document.createElement('canvas'); cv.width = full.width; cv.height = full.height; cv.getContext('2d').putImageData(out, 0, 0);
+    return cv.toDataURL('image/png');
+  }, { pose, frames, extra, outfit, jet, hat, layerOf, fw: fwN, fh: fhN, ppu: NPPU, px: NPX, py: NPY });
+  const charDir = path.join(OUT, 'Characters'); fs.mkdirSync(charDir, { recursive: true });
+  for (const f of fs.readdirSync(charDir)) if (f.startsWith('Nina')) fs.unlinkSync(path.join(charDir, f)); // limpa versões antigas
+  const ninaEntry = (name, frames, fps) => manifest.sheets.push({ category: 'Characters', name, path: `Art/Characters/${name}`, frames, fps,
+    frameWidth: fwN, frameHeight: fhN, pixelsPerUnit: NPPU, pivotX: NPX, pivotY: NPY });
+  for (const [pose, frames, fps, extra] of POSES) {
+    for (const [oid, col] of Object.entries(OUTFITS)) {
+      const name = `Nina_${pose}_${oid}`;
+      fs.writeFileSync(path.join(charDir, name + '.png'), Buffer.from((await renderNina(pose, frames, extra, col, 'none', null, null)).split(',')[1], 'base64'));
+      ninaEntry(name, frames, fps);
+    }
+    for (const jid of JETIDS) {
+      const name = `NinaJet_${pose}_${jid}`;
+      const d = await renderNina(pose, frames, extra, '#2ec4b6', jid, null, { outfit: '#2ec4b6', jet: 'none', hat: null });
+      fs.writeFileSync(path.join(charDir, name + '.png'), Buffer.from(d.split(',')[1], 'base64'));
+      ninaEntry(name, frames, fps);
+    }
+    for (const hid of HATS) {
+      const name = `NinaHat_${pose}_${hid}`;
+      const d = await renderNina(pose, frames, extra, '#2ec4b6', 'none', hid, { outfit: '#2ec4b6', jet: 'none', hat: null });
+      fs.writeFileSync(path.join(charDir, name + '.png'), Buffer.from(d.split(',')[1], 'base64'));
+      ninaEntry(name, frames, fps);
+    }
+    process.stdout.write('n');
+  }
+  manifest.nina = { layers: ['Nina_<pose>_<roupa> (corpo)', 'NinaJet_<pose>_<propulsor>', 'NinaHat_<pose>_<acessório>'],
+                    poses: POSES.map(p => p[0]), outfits: Object.keys(OUTFITS), jetpacks: JETIDS, hats: HATS,
+                    order: 'corpo → propulsor → acessório (todas com o mesmo pivô e tamanho de quadro)' };
+
   // ---- Ícones da Oficina: 3 estados por item (bloqueado / liberado / equipado)
-  const ids = ['jet_padrao', 'jet_bolhas', 'jet_confete', 'macacao_verde', 'macacao_laranja', 'macacao_roxo', 'macacao_dourado', 'capacete', 'bone',
+  const ids = ['jet_padrao', 'jet_bolhas', 'jet_confete', 'jet_vapor', 'macacao_verde', 'macacao_laranja', 'macacao_roxo', 'macacao_dourado', 'capacete', 'bone',
     'ima_porcas', 'cinto_lastro', 'botas_mola', 'para_choque', 'ficha_sortuda', 'segunda_chance', 'arrancada', 'pacote_fichas', 'slot_3'];
   const colors = { macacao_verde: '#2ec4b6', macacao_laranja: '#ff9f1c', macacao_roxo: '#b388ff', macacao_dourado: '#ffd23f' };
   for (const id of ids) for (const st of ['locked', 'owned', 'equipped']) {

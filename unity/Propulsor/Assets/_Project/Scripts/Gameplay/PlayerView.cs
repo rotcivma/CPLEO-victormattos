@@ -26,7 +26,9 @@ namespace Propulsor.Gameplay
         private SpriteRenderer _hat;
         private readonly Dictionary<VehicleKind, Color> _vehicleTint = new Dictionary<VehicleKind, Color>();
         // Arte gerada (Resources/Art); nulos = usa a arte geométrica
-        private SpriteRenderer _art, _vehicleArt;
+        private SpriteRenderer _art, _vehicleArt, _jetArt, _hatArt;
+        // Itens equipados (nomes das camadas: Nina_<pose>_<roupa>, NinaJet_<pose>_<propulsor>, NinaHat_<pose>_<acessório>)
+        private string _outfitId = "macacao_verde", _jetId = "jet_padrao", _hatId;
         private bool _useArt;
         private float _animTime;
 
@@ -47,10 +49,13 @@ namespace Propulsor.Gameplay
             _pointer.GetComponent<SpriteRenderer>().color = new Color32(0xFF, 0xD2, 0x3F, 255);
             _vehicleRoot.gameObject.SetActive(false);
 
-            _useArt = SpriteLibrary.Get("Nina_run") != null;
+            _useArt = SpriteLibrary.Get("Nina_run_macacao_verde") != null;
             if (_useArt)
             {
                 _art = MakeSprite("NinaArte", transform, null, 10);
+                // camadas com o mesmo pivô e tamanho de quadro, empilhadas sobre o corpo
+                _jetArt = MakeSprite("NinaPropulsor", _art.transform, null, 11);
+                _hatArt = MakeSprite("NinaAcessorio", _art.transform, null, 12);
                 _vehicleArt = MakeSprite("VeiculoArte", _vehicleRoot, null, 12);
                 // O jato passa a sair da mochila desenhada na folha.
                 _jet.transform.SetParent(transform, false);
@@ -64,6 +69,10 @@ namespace Propulsor.Gameplay
         /// <summary>Aplica roupa, acessório, propulsor e pinturas equipados (cosméticos).</summary>
         public void ApplyAppearance(Inventory inv)
         {
+            // camadas da arte gerada
+            _outfitId = inv.EquippedIn("outfit") ?? "macacao_verde";
+            _jetId = inv.EquippedIn("jetpack") ?? "jet_padrao";
+            _hatId = inv.EquippedIn("hat");
             var outfit = inv.Find(inv.EquippedIn("outfit"));
             if (outfit != null) _body.color = Hex(outfit.ColorA);
 
@@ -122,7 +131,12 @@ namespace Propulsor.Gameplay
 
             var vehicle = sim.Vehicle;
             _animTime += Time.deltaTime;
-            if (_art != null) _art.enabled = vehicle == null && visible;
+            if (_art != null)
+            {
+                _art.enabled = vehicle == null && visible;
+                _jetArt.enabled = _art.enabled;
+                _hatArt.enabled = _art.enabled && _hatId != null;
+            }
             _onFoot.gameObject.SetActive(vehicle == null && visible);
             _vehicleRoot.gameObject.SetActive(vehicle != null && visible);
 
@@ -139,16 +153,18 @@ namespace Propulsor.Gameplay
             {
                 string pose = m.State switch
                 {
-                    MotorState.Grounded => "Nina_run",
-                    MotorState.Thrusting => m.VelocityY > 2f ? "Nina_rise" : "Nina_fly",
-                    MotorState.Falling => m.VelocityY < -3f ? "Nina_fall" : "Nina_fly",
-                    MotorState.Dead => "Nina_tumble",
-                    _ => "Nina_down"
+                    MotorState.Grounded => "run",
+                    MotorState.Thrusting => m.VelocityY > 2f ? "rise" : "fly",
+                    MotorState.Falling => m.VelocityY < -3f ? "fall" : "fly",
+                    MotorState.Dead => "tumble",
+                    _ => "down"
                 };
-                var anim = A(pose) ?? A("Nina_run");
                 // corrida acompanha a velocidade; demais poses no ritmo da folha
-                float speed = m.State == MotorState.Grounded ? Mathf.Max(0.6f, m.VelocityX / 8f) : 1f;
-                _art.sprite = anim.Frame(_animTime * speed);
+                float time = _animTime * (m.State == MotorState.Grounded ? Mathf.Max(0.6f, m.VelocityX / 8f) : 1f);
+                var body = A($"Nina_{pose}_{_outfitId}") ?? A($"Nina_{pose}_macacao_verde");
+                _art.sprite = body?.Frame(time);
+                _jetArt.sprite = (A($"NinaJet_{pose}_{_jetId}") ?? A($"NinaJet_{pose}_jet_padrao"))?.Frame(time);
+                _hatArt.sprite = _hatId != null ? A($"NinaHat_{pose}_{_hatId}")?.Frame(time) : null;
                 _art.transform.localRotation = Quaternion.Euler(0f, 0f, m.State == MotorState.Thrusting || m.State == MotorState.Falling ? m.VelocityY * 0.8f : 0f);
                 return;
             }
