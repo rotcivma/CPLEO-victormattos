@@ -1,14 +1,16 @@
-using Propulsor.Core.Events;
+using System;
+using Propulsor.Core.Gameplay;
 using Propulsor.Data;
 using Propulsor.Gameplay;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Propulsor.Bootstrap
 {
     /// <summary>
-    /// Monta a cena do protótipo de movimentação (Fase 5) em código, para que o
-    /// projeto rode sem cenas/prefabs serializados: basta abrir qualquer cena
-    /// vazia e apertar Play. Se a cena já tiver um <see cref="PlayerView"/>, nada é feito.
+    /// Monta a cena de jogo em código, para que o projeto rode sem cenas/prefabs
+    /// serializados: basta abrir qualquer cena vazia e apertar Play.
+    /// Se a cena já tiver um <see cref="RunDriver"/>, nada é feito.
     /// </summary>
     public static class PrototypeBootstrap
     {
@@ -19,19 +21,20 @@ namespace Propulsor.Bootstrap
         private static void AutoBuild()
         {
             if (!AutoBuildEnabled) return;
-            if (Object.FindAnyObjectByType<PlayerView>() != null) return;
+            if (Object.FindAnyObjectByType<RunDriver>() != null) return;
             Build(new PlayerInput(), Resources.Load<PlayerPhysicsDef>("PlayerPhysics"));
         }
 
-        /// <summary>Cria câmera, corredor, jogador e HUD. Retorna o jogador.</summary>
-        public static PlayerView Build(IThrustInput input, PlayerPhysicsDef def = null)
+        /// <summary>Cria câmera, corredor, simulação, views e HUD. Retorna o condutor da corrida.</summary>
+        /// <param name="configFactory">Gera a configuração de cada corrida (null = padrão).</param>
+        public static RunDriver Build(IThrustInput input, PlayerPhysicsDef def = null, Func<RunConfig> configFactory = null)
         {
             Application.targetFrameRate = 60;
             if (def == null) def = ScriptableObject.CreateInstance<PlayerPhysicsDef>();
 
             var square = MakeSquareSprite();
+            var circle = MakeCircleSprite();
             var font = LoadBuiltinFont();
-            var bus = new EventBus();
 
             // Câmera
             var cam = Camera.main;
@@ -46,10 +49,16 @@ namespace Propulsor.Bootstrap
             var follow = cam.GetComponent<CameraFollow>();
             if (follow == null) follow = cam.gameObject.AddComponent<CameraFollow>();
 
-            // Jogador (personagem original provisório: corpo verde-água, mochila laranja, óculos)
+            // Simulação
+            var driver = new GameObject("Corrida").AddComponent<RunDriver>();
+            driver.Configure(def, input, configFactory);
+
+            // Protagonista (Nina — personagem original; arte provisória geométrica)
             var playerGo = new GameObject("Jogador");
+            var onFoot = new GameObject("APe").transform;
+            onFoot.SetParent(playerGo.transform, false);
             var bodyGo = new GameObject("Corpo");
-            bodyGo.transform.SetParent(playerGo.transform, false);
+            bodyGo.transform.SetParent(onFoot, false);
             var body = bodyGo.AddComponent<SpriteRenderer>();
             body.sprite = square;
             body.color = new Color32(0x2E, 0xC4, 0xB6, 255);
@@ -61,22 +70,22 @@ namespace Propulsor.Bootstrap
                                  new Vector3(-0.7f, 0f, 0f), new Vector3(0.5f, 0.55f, 1f));
             MakeChild(bodyGo.transform, "Oculos", square, new Color32(0x1B, 0x1F, 0x3B, 255), 11,
                       new Vector3(0.2f, 0.3f, 0f), new Vector3(0.6f, 0.1f, 1f));
-
             var particles = MakeThrustParticles(pack);
 
-            var player = playerGo.AddComponent<PlayerView>();
-            player.Configure(def, bus, input, body, particles);
+            var playerView = playerGo.AddComponent<PlayerView>();
+            playerView.Bind(driver, onFoot, body, particles, square);
 
             follow.Configure(playerGo.transform, def.ceilingY - def.floorY + 2f, (def.floorY + def.ceilingY) * 0.5f);
 
-            // Cenário
+            // Cenário e mundo
             var corridor = new GameObject("Corredor").AddComponent<CorridorView>();
             corridor.Build(cam.transform, def.floorY, def.ceilingY, square, font);
+            new GameObject("Mundo").AddComponent<WorldView>().Bind(driver, cam, square, circle);
 
             // HUD de depuração
-            new GameObject("DebugHud").AddComponent<DebugHud>().Bind(player);
+            new GameObject("DebugHud").AddComponent<DebugHud>().Bind(driver);
 
-            return player;
+            return driver;
         }
 
         private static Transform MakeChild(Transform parent, string name, Sprite sprite, Color color, int order,
@@ -132,6 +141,23 @@ namespace Propulsor.Bootstrap
             tex.SetPixels(pixels);
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
+        }
+
+        private static Sprite MakeCircleSprite()
+        {
+            const int n = 64;
+            var tex = new Texture2D(n, n) { filterMode = FilterMode.Bilinear, name = "Circulo" };
+            var pixels = new Color[n * n];
+            float r = n * 0.5f;
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Mathf.Sqrt((x + 0.5f - r) * (x + 0.5f - r) + (y + 0.5f - r) * (y + 0.5f - r));
+                    pixels[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(r - d));
+                }
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n);
         }
 
         private static Font LoadBuiltinFont()

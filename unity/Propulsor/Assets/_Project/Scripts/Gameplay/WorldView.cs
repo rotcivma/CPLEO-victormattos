@@ -1,0 +1,314 @@
+using System.Collections.Generic;
+using Propulsor.Core.Gameplay;
+using Propulsor.Core.Gameplay.Vehicles;
+using UnityEngine;
+
+namespace Propulsor.Gameplay
+{
+    /// <summary>
+    /// Desenha o estado do mundo da <see cref="RunSimulation"/>: arcos de faísca, feixes,
+    /// drones-foguete e avisos, porcas, fichas, tokens de veículo e a água do Jet-Esqui.
+    /// Usa pools: nada é instanciado depois do aquecimento.
+    /// </summary>
+    [DefaultExecutionOrder(100)] // ordem: jogador → câmera (0) → cenário
+    public sealed class WorldView : MonoBehaviour
+    {
+        private static readonly Color Electric = new Color32(0x7D, 0xF9, 0xFF, 255);
+        private static readonly Color Coil = new Color32(0xA8, 0xAE, 0xC9, 255);
+        private static readonly Color Danger = new Color32(0xE7, 0x1D, 0x36, 255);
+        private static readonly Color Gold = new Color32(0xFF, 0xD2, 0x3F, 255);
+        private static readonly Color Token = new Color32(0xB3, 0x88, 0xFF, 255);
+        private static readonly Color Accent = new Color32(0xFF, 0x9F, 0x1C, 255);
+
+        private RunDriver _driver;
+        private Camera _cam;
+        private Sprite _square, _circle;
+
+        private sealed class ZapperGo { public Transform Root, Beam, CoilA, CoilB; public SpriteRenderer BeamSr; }
+
+        private readonly Dictionary<long, ZapperGo> _zappers = new Dictionary<long, ZapperGo>();
+        private readonly Stack<ZapperGo> _zapperPool = new Stack<ZapperGo>();
+        private readonly Dictionary<int, SpriteRenderer> _pickups = new Dictionary<int, SpriteRenderer>();
+        private readonly Stack<SpriteRenderer> _pickupPool = new Stack<SpriteRenderer>();
+        private readonly Dictionary<int, SpriteRenderer> _missiles = new Dictionary<int, SpriteRenderer>();
+        private readonly Dictionary<int, SpriteRenderer> _warnings = new Dictionary<int, SpriteRenderer>();
+        private readonly Stack<SpriteRenderer> _spritePool = new Stack<SpriteRenderer>();
+        private readonly List<SpriteRenderer> _laserBeams = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> _laserEmitters = new List<SpriteRenderer>();
+        private SpriteRenderer _water;
+
+        private readonly HashSet<long> _seenLong = new HashSet<long>();
+        private readonly HashSet<int> _seenInt = new HashSet<int>();
+        private readonly List<long> _removeLong = new List<long>();
+        private readonly List<int> _removeInt = new List<int>();
+
+        public void Bind(RunDriver driver, Camera cam, Sprite square, Sprite circle)
+        {
+            _driver = driver;
+            _cam = cam;
+            _square = square;
+            _circle = circle;
+            _water = NewSprite("Agua", _square, new Color(0.12f, 0.56f, 1f, 0.35f), 15);
+            _water.gameObject.SetActive(false);
+            driver.Restarted += ClearAll;
+        }
+
+        private void LateUpdate()
+        {
+            if (_driver == null || _driver.Sim == null) return;
+            var sim = _driver.Sim;
+            float halfH = _cam.orthographicSize;
+            float halfW = halfH * _cam.aspect;
+            float camX = _cam.transform.position.x;
+
+            DrawZappers(sim);
+            DrawPickups(sim);
+            DrawLasers(sim, camX, halfW);
+            DrawMissiles(sim, camX, halfW);
+            DrawWater(sim, camX, halfW);
+        }
+
+        // ---------- arcos ----------
+        private void DrawZappers(RunSimulation sim)
+        {
+            _seenLong.Clear();
+            foreach (var seg in sim.Segments)
+            {
+                for (int i = 0; i < seg.Def.Zappers.Count; i++)
+                {
+                    long key = ((long)seg.Id << 8) | (uint)i;
+                    _seenLong.Add(key);
+                    if (!_zappers.TryGetValue(key, out var go)) _zappers[key] = go = RentZapper();
+                    var z = seg.Def.Zappers[i];
+                    Hazards.ZapperEndpoints(z, seg.StartX, sim.Time, out var ax, out var ay, out var bx, out var by);
+                    var a = new Vector3(ax, ay, 0f);
+                    var b = new Vector3(bx, by, 0f);
+                    go.CoilA.position = a;
+                    go.CoilB.position = b;
+                    go.Beam.position = (a + b) * 0.5f;
+                    go.Beam.rotation = Quaternion.Euler(0f, 0f, Hazards.ZapperAngle(z, sim.Time));
+                    // "Faísca": espessura tremula.
+                    float flicker = 0.35f + 0.15f * Mathf.PerlinNoise(Time.time * 20f, i);
+                    go.Beam.localScale = new Vector3(z.Length, flicker, 1f);
+                    go.BeamSr.color = z.IsRotating ? Color.Lerp(Electric, Accent, 0.5f) : Electric;
+                }
+            }
+            _removeLong.Clear();
+            foreach (var k in _zappers.Keys) if (!_seenLong.Contains(k)) _removeLong.Add(k);
+            foreach (var k in _removeLong) { ReturnZapper(_zappers[k]); _zappers.Remove(k); }
+        }
+
+        private ZapperGo RentZapper()
+        {
+            if (_zapperPool.Count > 0) { var z = _zapperPool.Pop(); z.Root.gameObject.SetActive(true); return z; }
+            var root = new GameObject("Arco").transform;
+            root.SetParent(transform, false);
+            var beam = NewSprite("Faisca", _square, Electric, 6, root);
+            var ca = NewSprite("BobinaA", _circle, Coil, 7, root);
+            var cb = NewSprite("BobinaB", _circle, Coil, 7, root);
+            ca.transform.localScale = cb.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+            return new ZapperGo { Root = root, Beam = beam.transform, BeamSr = beam, CoilA = ca.transform, CoilB = cb.transform };
+        }
+
+        private void ReturnZapper(ZapperGo z) { z.Root.gameObject.SetActive(false); _zapperPool.Push(z); }
+
+        // ---------- coletáveis ----------
+        private void DrawPickups(RunSimulation sim)
+        {
+            _seenInt.Clear();
+            foreach (var p in sim.Pickups)
+            {
+                if (p.Collected) continue;
+                _seenInt.Add(p.Id);
+                if (!_pickups.TryGetValue(p.Id, out var sr))
+                {
+                    _pickups[p.Id] = sr = RentPickup();
+                    StylePickup(sr, p.Kind);
+                }
+                float pulse = p.Kind == PickupKind.Coin ? 1f : 1f + 0.08f * Mathf.Sin(Time.time * 6f);
+                float size = p.Kind == PickupKind.Coin ? 0.45f : 0.8f;
+                sr.transform.position = new Vector3(p.X, p.Y, 0f);
+                sr.transform.localScale = new Vector3(size * pulse * (p.Kind == PickupKind.Coin ? Mathf.Abs(Mathf.Cos(Time.time * 4f + p.X)) * 0.6f + 0.4f : 1f),
+                                                      size * pulse, 1f);
+                if (p.Kind == PickupKind.VehicleToken) sr.transform.rotation = Quaternion.Euler(0f, 0f, Time.time * 90f);
+            }
+            _removeInt.Clear();
+            foreach (var k in _pickups.Keys) if (!_seenInt.Contains(k)) _removeInt.Add(k);
+            foreach (var k in _removeInt)
+            {
+                var sr = _pickups[k];
+                sr.gameObject.SetActive(false);
+                _pickupPool.Push(sr);
+                _pickups.Remove(k);
+            }
+        }
+
+        private SpriteRenderer RentPickup()
+        {
+            if (_pickupPool.Count > 0) { var s = _pickupPool.Pop(); s.gameObject.SetActive(true); return s; }
+            return NewSprite("Coletavel", _circle, Gold, 4);
+        }
+
+        private void StylePickup(SpriteRenderer sr, PickupKind kind)
+        {
+            sr.transform.rotation = Quaternion.identity;
+            switch (kind)
+            {
+                case PickupKind.Coin: sr.sprite = _circle; sr.color = Gold; break;          // porca
+                case PickupKind.Token: sr.sprite = _circle; sr.color = Token; break;        // ficha
+                case PickupKind.VehicleToken: sr.sprite = _square; sr.color = Accent; break; // caixa de veículo
+            }
+        }
+
+        // ---------- feixes ----------
+        private void DrawLasers(RunSimulation sim, float camX, float halfW)
+        {
+            var laser = sim.ActiveLaser;
+            int rowCount = 0;
+            if (laser != null)
+            {
+                // Emissores deslizam das bordas na entrada/saída.
+                float slide = laser.Phase == LaserPhase.Entering ? laser.PhaseTime / LaserSequence.EnterTime
+                            : laser.Phase == LaserPhase.Leaving ? 1f - laser.PhaseTime / LaserSequence.LeaveTime : 1f;
+                float inset = Mathf.Lerp(-0.6f, 0.4f, slide);
+                var rows = laser.CurrentRows;
+                // Mostra emissores de todas as linhas da onda atual (ou da primeira na entrada).
+                var emitterRows = rows.Length > 0 ? rows : laser.Waves[Mathf.Min(laser.WaveIndex, laser.Waves.Count - 1)].Rows;
+                for (int i = 0; i < emitterRows.Length; i++)
+                {
+                    var left = Emitter(i * 2);
+                    var right = Emitter(i * 2 + 1);
+                    left.transform.position = new Vector3(camX - halfW + inset, emitterRows[i], 0f);
+                    right.transform.position = new Vector3(camX + halfW - inset, emitterRows[i], 0f);
+                }
+                rowCount = emitterRows.Length;
+
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    var beam = Beam(i);
+                    bool firing = laser.Phase == LaserPhase.Firing;
+                    float thickness = firing ? Hazards.LaserHalfThickness * 2f : 0.06f;
+                    float alpha = firing ? 1f : (Mathf.Repeat(Time.time * 6f, 1f) < 0.5f ? 0.8f : 0.3f);
+                    beam.color = new Color(Danger.r, Danger.g, Danger.b, alpha);
+                    beam.transform.position = new Vector3(camX, rows[i], 0f);
+                    beam.transform.localScale = new Vector3(halfW * 2f, thickness, 1f);
+                }
+                for (int i = rows.Length; i < _laserBeams.Count; i++) _laserBeams[i].gameObject.SetActive(false);
+            }
+            else
+            {
+                foreach (var b in _laserBeams) b.gameObject.SetActive(false);
+            }
+            for (int i = rowCount * 2; i < _laserEmitters.Count; i++) _laserEmitters[i].gameObject.SetActive(false);
+        }
+
+        private SpriteRenderer Beam(int i)
+        {
+            while (_laserBeams.Count <= i) _laserBeams.Add(NewSprite("Feixe", _square, Danger, 9));
+            _laserBeams[i].gameObject.SetActive(true);
+            return _laserBeams[i];
+        }
+
+        private SpriteRenderer Emitter(int i)
+        {
+            while (_laserEmitters.Count <= i)
+            {
+                var e = NewSprite("Emissor", _square, Coil, 10);
+                e.transform.localScale = new Vector3(0.8f, 0.6f, 1f);
+                _laserEmitters.Add(e);
+            }
+            _laserEmitters[i].gameObject.SetActive(true);
+            return _laserEmitters[i];
+        }
+
+        // ---------- drones ----------
+        private void DrawMissiles(RunSimulation sim, float camX, float halfW)
+        {
+            _seenInt.Clear();
+            foreach (var m in sim.Missiles)
+            {
+                _seenInt.Add(m.Id);
+                if (m.Phase == MissilePhase.Flying)
+                {
+                    Hide(_warnings, m.Id);
+                    var body = Get(_missiles, m.Id, "Drone", Danger, 11);
+                    body.sprite = _square;
+                    body.transform.position = new Vector3(m.X, m.Y, 0f);
+                    body.transform.localScale = new Vector3(Missile.Width, Missile.Height, 1f);
+                }
+                else if (m.IsWarning)
+                {
+                    var w = Get(_warnings, m.Id, "Aviso", Danger, 20);
+                    w.sprite = _circle;
+                    float hz = m.Phase == MissilePhase.Locked ? 10f : 4f;
+                    w.enabled = Mathf.Repeat(Time.time * hz, 1f) < 0.6f;
+                    w.transform.position = new Vector3(camX + halfW - 0.7f, m.Y, 0f);
+                    w.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+                }
+            }
+            Prune(_missiles);
+            Prune(_warnings);
+        }
+
+        private SpriteRenderer Get(Dictionary<int, SpriteRenderer> map, int id, string name, Color c, int order)
+        {
+            if (map.TryGetValue(id, out var sr)) return sr;
+            sr = _spritePool.Count > 0 ? _spritePool.Pop() : NewSprite(name, _square, c, order);
+            sr.gameObject.SetActive(true);
+            sr.enabled = true;
+            sr.color = c;
+            sr.sortingOrder = order;
+            map[id] = sr;
+            return sr;
+        }
+
+        private void Hide(Dictionary<int, SpriteRenderer> map, int id)
+        {
+            if (!map.TryGetValue(id, out var sr)) return;
+            sr.gameObject.SetActive(false);
+            _spritePool.Push(sr);
+            map.Remove(id);
+        }
+
+        private void Prune(Dictionary<int, SpriteRenderer> map)
+        {
+            _removeInt.Clear();
+            foreach (var k in map.Keys) if (!_seenInt.Contains(k)) _removeInt.Add(k);
+            foreach (var k in _removeInt) Hide(map, k);
+        }
+
+        // ---------- água do Jet-Esqui ----------
+        private void DrawWater(RunSimulation sim, float camX, float halfW)
+        {
+            bool on = sim.Vehicle != null && sim.Vehicle.Kind == VehicleKind.SplashSki;
+            _water.gameObject.SetActive(on);
+            if (!on) return;
+            float h = SplashSkiMotor.WaterY - sim.Config.Physics.FloorY;
+            _water.transform.position = new Vector3(camX, sim.Config.Physics.FloorY + h * 0.5f, 0f);
+            _water.transform.localScale = new Vector3(halfW * 2f + 2f, h, 1f);
+        }
+
+        // ---------- util ----------
+        private void ClearAll()
+        {
+            foreach (var z in _zappers.Values) ReturnZapper(z);
+            _zappers.Clear();
+            foreach (var p in _pickups.Values) { p.gameObject.SetActive(false); _pickupPool.Push(p); }
+            _pickups.Clear();
+            _seenInt.Clear();
+            Prune(_missiles);
+            Prune(_warnings);
+        }
+
+        private SpriteRenderer NewSprite(string name, Sprite sprite, Color color, int order, Transform parent = null)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent != null ? parent : transform, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.color = color;
+            sr.sortingOrder = order;
+            return sr;
+        }
+    }
+}

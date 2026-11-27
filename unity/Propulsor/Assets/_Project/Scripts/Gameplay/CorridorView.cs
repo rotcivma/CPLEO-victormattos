@@ -7,6 +7,7 @@ namespace Propulsor.Gameplay
     /// marcos a cada 10 m. Tudo reciclado (sem instanciar durante a corrida).
     /// Arte provisória geométrica e original.
     /// </summary>
+    [DefaultExecutionOrder(100)] // ordem: jogador → câmera (0) → cenário
     public sealed class CorridorView : MonoBehaviour
     {
         private Transform _cam;

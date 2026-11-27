@@ -12,22 +12,22 @@ Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falho
 | F-05 | Física | Integração independente do framerate (30/60/120 Hz) | U | diferença de posição < 1 % | ✅ U (dotnet, 2026-11-27) |
 | F-06 | Física | Tempo chão→teto comparado à referência | C | ±15 % | ⏳ |
 | M-01 | Movimento | Toques curtos permitem pairar | M | oscilação estável ±0,5 u | ⏳ |
-| C-01 | Colisão | Arco estático mata a pé | P | `PlayerDied(Arc)` | ⏳ |
-| C-02 | Colisão | Arco rotativo: colisor acompanha rotação | P | dano só na área do arco | ⏳ |
-| C-03 | Colisão | Feixe em Warning não causa dano; em Firing causa | P | | ⏳ |
-| C-04 | Colisão | Perigo com veículo destrói veículo, não mata | P | `VehicleDestroyed`, jogador vivo, invulnerável 1 s | ⏳ |
-| C-05 | Colisão | Guindaste Blindado aguenta 3 drones | P | destruído no 3º | ⏳ |
-| C-06 | Colisão | Coleta e dano no mesmo quadro | P | coleta contabilizada | ⏳ |
-| O-01 | Geração | Mesma seed ⇒ mesma sequência | U | idêntica | ⏳ |
-| O-02 | Geração | Sem repetição de segmento nas últimas 3 | U | | ⏳ |
-| O-03 | Geração | Validador: todo segmento tem caminho livre | U | 100 % | ⏳ |
-| O-04 | Drones | Não lançados durante feixe ativo nem na Moto-Trilho | U/P | 0 lançamentos | ⏳ |
-| O-05 | Drones | `t_track` decresce com distância | U | 1,4 s @0 m → 0,6 s @3000 m | ⏳ |
-| O-06 | Desempenho | Sem alocação GC por quadro na corrida | P | 0 B/frame após aquecimento | ⏳ |
-| K-01 | Moedas | Porca coletada soma 1 à run wallet | U | | ⏳ |
-| K-02 | Moedas | Dobro ×2 aplica só nas porcas da corrida | U | | ⏳ |
-| K-03 | Moedas | Ímã atrai dentro do raio | P | | ⏳ |
-| V-01..08 | Veículos | Controle de cada veículo conforme doc 3·01 §3 | P/M | | ⏳ |
+| C-01 | Colisão | Arco estático mata a pé | P | `PlayerDied(Arc)` | ✅ U (dotnet, 2026-11-27) |
+| C-02 | Colisão | Arco rotativo: colisor acompanha rotação | P | dano só na área do arco | ✅ U (dotnet, 2026-11-27) |
+| C-03 | Colisão | Feixe em Warning não causa dano; em Firing causa | P | | ✅ U (dotnet, 2026-11-27) |
+| C-04 | Colisão | Perigo com veículo destrói veículo, não mata | P | `VehicleDestroyed`, jogador vivo, invulnerável 1 s | ✅ U (dotnet, 2026-11-27) |
+| C-05 | Colisão | Guindaste Blindado aguenta 3 drones | P | destruído no 3º | ✅ U (dotnet, 2026-11-27) |
+| C-06 | Colisão | Coleta e dano no mesmo quadro | P | coleta contabilizada | ✅ U (dotnet, 2026-11-27) |
+| O-01 | Geração | Mesma seed ⇒ mesma sequência | U | idêntica | ✅ U (dotnet, 2026-11-27) |
+| O-02 | Geração | Sem repetição de segmento nas últimas 3 | U | | ✅ U (dotnet, 2026-11-27) |
+| O-03 | Geração | Validador: todo segmento tem caminho livre | U | 100 % | ✅ U (dotnet, 2026-11-27) |
+| O-04 | Drones | Não lançados durante feixe ativo nem na Moto-Trilho | U/P | 0 lançamentos | ✅ U (dotnet, 2026-11-27) |
+| O-05 | Drones | `t_track` decresce com distância | U | 1,4 s @0 m → 0,6 s @3000 m | ✅ U (dotnet, 2026-11-27) |
+| O-06 | Desempenho | Sem alocação GC por quadro na corrida | P | 0 B/frame após aquecimento | ⏳ (pools implementados; medir no Profiler do Unity) |
+| K-01 | Moedas | Porca coletada soma 1 à run wallet | U | | ✅ U (dotnet, 2026-11-27) |
+| K-02 | Moedas | Dobro ×2 aplica só nas porcas da corrida | U | | 🟡 parcial: valor da moeda configurável testado; bônus "Dobro" depende da Fase 8 |
+| K-03 | Moedas | Ímã atrai dentro do raio | P | | ✅ U (dotnet, 2026-11-27) |
+| V-01..08 | Veículos | Controle de cada veículo conforme doc 3·01 §3 | P/M | | ✅ U lógica (dotnet, 2026-11-27) · ⏳ M sensação no Unity |
 | N-01 | Navegação | Splash→Carregamento→Menu | P | | ⏳ |
 | N-02 | Navegação | Toque livre no menu inicia corrida | P | | ⏳ |
 | N-03 | Navegação | Pausa/continuar com contagem; perda de foco pausa | P | | ⏳ |

@@ -56,7 +56,7 @@ namespace Propulsor.Gameplay
             }
         }
 
-        /// <summary>Teclas de depuração do protótipo (K = matar, R = reiniciar).</summary>
+        /// <summary>Teclas de depuração do protótipo (K = matar, R = reiniciar, V = montar veículo).</summary>
         public static bool DebugKeyDown(char key)
         {
 #if ENABLE_INPUT_SYSTEM
@@ -65,6 +65,7 @@ namespace Propulsor.Gameplay
             {
                 case 'K': return Keyboard.current.kKey.wasPressedThisFrame;
                 case 'R': return Keyboard.current.rKey.wasPressedThisFrame;
+                case 'V': return Keyboard.current.vKey.wasPressedThisFrame;
                 default: return false;
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
@@ -72,6 +73,7 @@ namespace Propulsor.Gameplay
             {
                 case 'K': return Input.GetKeyDown(KeyCode.K);
                 case 'R': return Input.GetKeyDown(KeyCode.R);
+                case 'V': return Input.GetKeyDown(KeyCode.V);
                 default: return false;
             }
 #else

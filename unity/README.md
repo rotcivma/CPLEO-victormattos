@@ -1,4 +1,4 @@
-# PROPULSOR — protótipo Unity (Fase 5: movimentação)
+# PROPULSOR — protótipo Unity (Fases 5–6: movimentação e gameplay)
 
 Jogo original do gênero "runner com propulsor". Ver `docs/` para toda a
 investigação, arquitetura e planos.
@@ -21,6 +21,7 @@ investigação, arquitetura e planos.
 | Segurar toque / clique / espaço | subir (propulsor) |
 | Soltar | cair |
 | **K** | matar o personagem (teste do "ragdoll") |
+| **V** | montar o próximo veículo (teste) |
 | **R** ou toque após parar | reiniciar |
 
 ### Ajustar a física ao vivo
@@ -37,9 +38,12 @@ investigação, arquitetura e planos.
 ## Estrutura
 ```
 Assets/_Project/Scripts/
-  Core/       C# puro, sem UnityEngine (PlayerMotor, FixedStepper, EventBus, eventos)
+  Core/       C# puro, sem UnityEngine
+    Physics/    PlayerMotor, FixedStepper
+    Gameplay/   RunSimulation, trechos, validador, perigos, drones, veículos
+    Events/     EventBus e eventos
   Data/       ScriptableObjects (PlayerPhysicsDef)
-  Gameplay/   PlayerView, PlayerInput, CameraFollow, CorridorView, DebugHud
+  Gameplay/   RunDriver, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
   Bootstrap/  PrototypeBootstrap (monta a cena em código)
 Assets/Tests/ EditMode + PlayMode
 ```

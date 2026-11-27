@@ -1,141 +1,161 @@
-using Propulsor.Core.Events;
+using Propulsor.Core.Gameplay.Vehicles;
 using Propulsor.Core.Physics;
-using Propulsor.Data;
 using UnityEngine;
 
 namespace Propulsor.Gameplay
 {
     /// <summary>
-    /// Ponte entre a lógica pura (<see cref="PlayerMotor"/>) e a cena Unity:
-    /// lê o input, avança a simulação em passo fixo, posiciona o transform
-    /// (com interpolação) e publica eventos no <see cref="EventBus"/>.
+    /// Desenha a protagonista (a pé) ou o veículo atual, a partir do <see cref="RunDriver"/>.
+    /// Arte provisória geométrica e original.
     /// </summary>
+    [DefaultExecutionOrder(-50)] // ordem: jogador → câmera (0) → cenário
     public sealed class PlayerView : MonoBehaviour
     {
-        [SerializeField] private PlayerPhysicsDef physicsDef;
-        [Tooltip("Reaplica os valores do asset a cada quadro (ajuste ao vivo no Play Mode).")]
-        [SerializeField] private bool liveTuning = true;
-        [SerializeField] private SpriteRenderer body;
-        [SerializeField] private ParticleSystem thrustParticles;
+        private RunDriver _driver;
+        private Transform _onFoot;
+        private SpriteRenderer _body;
+        private ParticleSystem _jet;
+        private Transform _vehicleRoot;
+        private SpriteRenderer _vehicleBody;
+        private SpriteRenderer _vehicleCockpit;
+        private Transform _pointer;
+        private VehicleKind? _shownVehicle;
 
-        public PlayerMotor Motor { get; private set; }
-        public EventBus Bus { get; private set; }
-
-        private IThrustInput _input;
-        private PlayerPhysicsParams _params;
-        private readonly FixedStepper _stepper = new FixedStepper(0.02f);
-        private Vector2 _prevPos, _currPos;
-        private float _lastPublishedMeters = -1f;
-
-        /// <summary>Configuração feita pelo bootstrap (alternativa ao Inspector).</summary>
-        public void Configure(PlayerPhysicsDef def, EventBus bus, IThrustInput input,
-                              SpriteRenderer bodyRenderer, ParticleSystem particles)
+        public void Bind(RunDriver driver, Transform onFoot, SpriteRenderer body, ParticleSystem jet, Sprite square)
         {
-            physicsDef = def;
-            Bus = bus;
-            _input = input;
-            body = bodyRenderer;
-            thrustParticles = particles;
-            Init();
+            _driver = driver;
+            _onFoot = onFoot;
+            _body = body;
+            _jet = jet;
+
+            _vehicleRoot = new GameObject("Veiculo").transform;
+            _vehicleRoot.SetParent(transform, false);
+            _vehicleBody = MakeSprite("Carroceria", _vehicleRoot, square, 12);
+            _vehicleCockpit = MakeSprite("Cabine", _vehicleRoot, square, 13);
+            _vehicleCockpit.color = new Color32(0x2E, 0xC4, 0xB6, 255); // Nina dentro
+            _pointer = MakeSprite("Ponteiro", _vehicleRoot, square, 14).transform;
+            _pointer.GetComponent<SpriteRenderer>().color = new Color32(0xFF, 0xD2, 0x3F, 255);
+            _vehicleRoot.gameObject.SetActive(false);
         }
 
-        private void Awake()
+        private static SpriteRenderer MakeSprite(string name, Transform parent, Sprite s, int order)
         {
-            if (Motor == null && physicsDef != null) Init();
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = s;
+            sr.sortingOrder = order;
+            return sr;
         }
 
-        private void Init()
+        private void LateUpdate()
         {
-            Bus ??= new EventBus();
-            _input ??= new PlayerInput();
-            _params = physicsDef != null ? physicsDef.ToParams() : new PlayerPhysicsParams();
-            Motor = new PlayerMotor(_params);
-            Motor.StateChanged += (from, to) =>
-            {
-                Bus.Publish(new PlayerStateChanged(from, to));
-                if (to == MotorState.Dead) Bus.Publish(new PlayerDied());
-            };
-            Motor.Landed += () => Bus.Publish(new PlayerLanded());
-            Motor.Stopped += () => Bus.Publish(new PlayerStopped(Motor.Distance));
-            Restart();
+            if (_driver == null || _driver.Sim == null) return;
+            var sim = _driver.Sim;
+            var pos = _driver.RenderPosition;
+            transform.position = new Vector3(pos.x, pos.y, 0f);
+
+            // Pisca enquanto invulnerável.
+            bool visible = !sim.IsInvulnerable || Mathf.Repeat(Time.time * 8f, 1f) < 0.5f;
+
+            var vehicle = sim.Vehicle;
+            _onFoot.gameObject.SetActive(vehicle == null && visible);
+            _vehicleRoot.gameObject.SetActive(vehicle != null && visible);
+
+            if (vehicle != null) { DrawVehicle(vehicle); return; }
+            _shownVehicle = null;
+            DrawOnFoot(sim.Motor);
         }
 
-        public void Restart()
+        private void DrawOnFoot(PlayerMotor m)
         {
-            Motor.Reset(0f, _params.FloorY);
-            _stepper.Reset();
-            _prevPos = _currPos = new Vector2(Motor.X, Motor.Y);
-            _lastPublishedMeters = -1f;
-            transform.localRotation = Quaternion.identity;
-            Bus.Publish(new RunStarted(Random.Range(int.MinValue, int.MaxValue)));
-        }
-
-        public void Kill() => Motor?.Kill();
-
-        private void Update()
-        {
-            if (Motor == null) return;
-
-            if (liveTuning && physicsDef != null) physicsDef.CopyTo(_params);
-
-            if (PlayerInput.DebugKeyDown('K')) Kill();
-            if (PlayerInput.DebugKeyDown('R') || (Motor.State == MotorState.DeadStopped && _input.PressedThisFrame))
-                Restart();
-
-            bool thrust = _input.IsHeld;
-            _stepper.Advance(Time.deltaTime, dt =>
-            {
-                _prevPos = _currPos;
-                Motor.Step(dt, thrust);
-                _currPos = new Vector2(Motor.X, Motor.Y);
-            });
-
-            // Interpola entre os dois últimos passos fixos para movimento suave em qualquer framerate.
-            var p = Vector2.Lerp(_prevPos, _currPos, _stepper.Alpha);
-            transform.position = new Vector3(p.x, p.y, 0f);
-
-            UpdateVisuals(thrust);
-
-            float meters = Mathf.Floor(Motor.Distance);
-            if (meters != _lastPublishedMeters)
-            {
-                _lastPublishedMeters = meters;
-                Bus.Publish(new DistanceChanged(meters));
-            }
-        }
-
-        private void UpdateVisuals(bool thrust)
-        {
-            if (thrustParticles != null)
-            {
-                var emission = thrustParticles.emission;
-                emission.enabled = thrust && !Motor.IsDead;
-            }
-
-            if (body == null) return;
-
-            switch (Motor.State)
+            var emission = _jet.emission;
+            emission.enabled = m.State == MotorState.Thrusting;
+            var t = _body.transform;
+            switch (m.State)
             {
                 case MotorState.Grounded:
-                    // "Corrida": pequeno balanço vertical proporcional à velocidade.
-                    float bob = Mathf.Abs(Mathf.Sin(Time.time * Motor.VelocityX * 1.2f)) * 0.06f;
-                    body.transform.localPosition = new Vector3(0f, 0.5f + bob, 0f);
-                    body.transform.localRotation = Quaternion.identity;
+                    float bob = Mathf.Abs(Mathf.Sin(Time.time * m.VelocityX * 1.2f)) * 0.06f;
+                    t.localPosition = new Vector3(0f, 0.5f + bob, 0f);
+                    t.localRotation = Quaternion.identity;
                     break;
                 case MotorState.Thrusting:
                 case MotorState.Falling:
-                    body.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-                    // Inclina levemente conforme a velocidade vertical.
-                    body.transform.localRotation = Quaternion.Euler(0f, 0f, -Motor.VelocityY * 1.2f);
+                    t.localPosition = new Vector3(0f, 0.5f, 0f);
+                    t.localRotation = Quaternion.Euler(0f, 0f, -m.VelocityY * 1.2f);
                     break;
                 case MotorState.Dead:
-                    body.transform.Rotate(0f, 0f, -Motor.VelocityX * 40f * Time.deltaTime);
+                    t.Rotate(0f, 0f, -m.VelocityX * 40f * Time.deltaTime);
                     break;
                 case MotorState.DeadStopped:
-                    body.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
-                    body.transform.localPosition = new Vector3(0f, 0.3f, 0f);
+                    t.localRotation = Quaternion.Euler(0f, 0f, -90f);
+                    t.localPosition = new Vector3(0f, 0.3f, 0f);
                     break;
             }
         }
+
+        private void DrawVehicle(IVehicleMotor v)
+        {
+            var emission = _jet.emission;
+            emission.enabled = false;
+
+            if (_shownVehicle != v.Kind)
+            {
+                _shownVehicle = v.Kind;
+                _vehicleBody.color = VehicleColor(v.Kind);
+                _vehicleBody.transform.localScale = new Vector3(v.Width, v.Height, 1f);
+                _vehicleBody.transform.localPosition = new Vector3(0f, v.Height * 0.5f, 0f);
+                _vehicleCockpit.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+                _vehicleCockpit.transform.localPosition = new Vector3(v.Width * 0.15f, v.Height * 0.75f, 0f);
+            }
+
+            // Detalhes por tipo
+            float tilt = 0f;
+            switch (v)
+            {
+                case FlapDroneMotor _:
+                case MechMotor _:
+                case RailBikeMotor _:
+                case HeavyRigMotor _:
+                    tilt = -v.VelocityY * 1.5f;
+                    break;
+                case SkySerpentMotor _:
+                    tilt = Mathf.Sin(Time.time * 6f) * 6f;
+                    break;
+                case FlipSuitMotor f:
+                    _vehicleRoot.localScale = new Vector3(1f, f.GravitySign > 0 ? -1f : 1f, 1f);
+                    break;
+            }
+            if (!(v is FlipSuitMotor)) _vehicleRoot.localScale = Vector3.one;
+            _vehicleBody.transform.localRotation = Quaternion.Euler(0f, 0f, tilt);
+
+            bool hasPointer = v is BlinkPodMotor;
+            _pointer.gameObject.SetActive(hasPointer);
+            if (v is BlinkPodMotor b)
+            {
+                _pointer.localScale = new Vector3(1.2f, 0.12f, 1f);
+                _pointer.localRotation = Quaternion.Euler(0f, 0f, b.PointerAngleDeg);
+                _pointer.localPosition = new Vector3(0f, v.Height * 0.5f, 0f) +
+                                         _pointer.localRotation * new Vector3(1.1f, 0f, 0f);
+            }
+
+            // Blindado: escurece a cada acerto
+            if (v is HeavyRigMotor)
+                _vehicleBody.color = Color.Lerp(new Color32(0x55, 0x55, 0x66, 255), VehicleColor(v.Kind),
+                                                v.HitPoints / (float)HeavyRigMotor.MaxHitPoints);
+        }
+
+        public static Color VehicleColor(VehicleKind k) => k switch
+        {
+            VehicleKind.Mech => (Color)new Color32(0x8E, 0x9A, 0xAF, 255),
+            VehicleKind.FlapDrone => (Color)new Color32(0x6B, 0xCB, 0x77, 255),
+            VehicleKind.BlinkPod => (Color)new Color32(0xB3, 0x88, 0xFF, 255),
+            VehicleKind.RailBike => (Color)new Color32(0xE7, 0x1D, 0x36, 255),
+            VehicleKind.SkySerpent => (Color)new Color32(0xFF, 0x9F, 0x1C, 255),
+            VehicleKind.FlipSuit => (Color)new Color32(0x7D, 0xF9, 0xFF, 255),
+            VehicleKind.SplashSki => (Color)new Color32(0x1E, 0x90, 0xFF, 255),
+            VehicleKind.HeavyRig => (Color)new Color32(0xFF, 0xD2, 0x3F, 255),
+            _ => Color.white
+        };
     }
 }

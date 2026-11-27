@@ -106,6 +106,28 @@ namespace Propulsor.Core.Physics
             if (wasAirborne && next == MotorState.Grounded) Landed?.Invoke();
         }
 
+        /// <summary>
+        /// Avança só o eixo horizontal (usado enquanto um veículo controla o eixo vertical).
+        /// </summary>
+        /// <param name="speedMultiplier">Multiplicador de velocidade do veículo (ex.: moto).</param>
+        public void AdvanceHorizontal(float dt, float speedMultiplier)
+        {
+            if (dt <= 0f || IsDead) return;
+            VelocityX = Math.Min(VelocityX + _p.HorizontalAcceleration * dt, _p.MaxSpeed);
+            X += VelocityX * speedMultiplier * dt;
+        }
+
+        /// <summary>
+        /// Reposiciona verticalmente o jogador (ex.: ao ser ejetado de um veículo destruído).
+        /// </summary>
+        public void PlaceVertical(float y, float velocityY)
+        {
+            if (IsDead) return;
+            Y = Clamp(y, _p.FloorY, _p.MaxY);
+            VelocityY = Clamp(velocityY, _p.MaxFallSpeed, _p.MaxRiseSpeed);
+            SetState(IsOnFloor && VelocityY <= 0f ? MotorState.Grounded : MotorState.Falling);
+        }
+
         private void StepDead(float dt)
         {
             if (State == MotorState.DeadStopped) return;
