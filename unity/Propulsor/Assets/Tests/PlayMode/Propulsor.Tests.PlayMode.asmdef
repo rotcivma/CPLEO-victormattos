@@ -1,0 +1,25 @@
+{
+    "name": "Propulsor.Tests.PlayMode",
+    "rootNamespace": "Propulsor.Tests.PlayMode",
+    "references": [
+        "Propulsor.Core",
+        "Propulsor.Data",
+        "Propulsor.Gameplay",
+        "Propulsor.Bootstrap",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

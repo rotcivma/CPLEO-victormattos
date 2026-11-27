@@ -1,0 +1,144 @@
+using Propulsor.Core.Events;
+using Propulsor.Data;
+using Propulsor.Gameplay;
+using UnityEngine;
+
+namespace Propulsor.Bootstrap
+{
+    /// <summary>
+    /// Monta a cena do protótipo de movimentação (Fase 5) em código, para que o
+    /// projeto rode sem cenas/prefabs serializados: basta abrir qualquer cena
+    /// vazia e apertar Play. Se a cena já tiver um <see cref="PlayerView"/>, nada é feito.
+    /// </summary>
+    public static class PrototypeBootstrap
+    {
+        /// <summary>Desligue para cenas que não devem receber o protótipo automaticamente.</summary>
+        public static bool AutoBuildEnabled = true;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoBuild()
+        {
+            if (!AutoBuildEnabled) return;
+            if (Object.FindAnyObjectByType<PlayerView>() != null) return;
+            Build(new PlayerInput(), Resources.Load<PlayerPhysicsDef>("PlayerPhysics"));
+        }
+
+        /// <summary>Cria câmera, corredor, jogador e HUD. Retorna o jogador.</summary>
+        public static PlayerView Build(IThrustInput input, PlayerPhysicsDef def = null)
+        {
+            Application.targetFrameRate = 60;
+            if (def == null) def = ScriptableObject.CreateInstance<PlayerPhysicsDef>();
+
+            var square = MakeSquareSprite();
+            var font = LoadBuiltinFont();
+            var bus = new EventBus();
+
+            // Câmera
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
+                cam = camGo.AddComponent<Camera>();
+            }
+            cam.backgroundColor = new Color32(0x1B, 0x1F, 0x3B, 255);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            // Não usar "??" com UnityEngine.Object (null "falso" do Unity).
+            var follow = cam.GetComponent<CameraFollow>();
+            if (follow == null) follow = cam.gameObject.AddComponent<CameraFollow>();
+
+            // Jogador (personagem original provisório: corpo verde-água, mochila laranja, óculos)
+            var playerGo = new GameObject("Jogador");
+            var bodyGo = new GameObject("Corpo");
+            bodyGo.transform.SetParent(playerGo.transform, false);
+            var body = bodyGo.AddComponent<SpriteRenderer>();
+            body.sprite = square;
+            body.color = new Color32(0x2E, 0xC4, 0xB6, 255);
+            body.sortingOrder = 10;
+            bodyGo.transform.localScale = new Vector3(0.55f, def.playerHeight, 1f);
+            bodyGo.transform.localPosition = new Vector3(0f, def.playerHeight * 0.5f, 0f);
+
+            var pack = MakeChild(bodyGo.transform, "Mochila", square, new Color32(0xFF, 0x9F, 0x1C, 255), 9,
+                                 new Vector3(-0.7f, 0f, 0f), new Vector3(0.5f, 0.55f, 1f));
+            MakeChild(bodyGo.transform, "Oculos", square, new Color32(0x1B, 0x1F, 0x3B, 255), 11,
+                      new Vector3(0.2f, 0.3f, 0f), new Vector3(0.6f, 0.1f, 1f));
+
+            var particles = MakeThrustParticles(pack);
+
+            var player = playerGo.AddComponent<PlayerView>();
+            player.Configure(def, bus, input, body, particles);
+
+            follow.Configure(playerGo.transform, def.ceilingY - def.floorY + 2f, (def.floorY + def.ceilingY) * 0.5f);
+
+            // Cenário
+            var corridor = new GameObject("Corredor").AddComponent<CorridorView>();
+            corridor.Build(cam.transform, def.floorY, def.ceilingY, square, font);
+
+            // HUD de depuração
+            new GameObject("DebugHud").AddComponent<DebugHud>().Bind(player);
+
+            return player;
+        }
+
+        private static Transform MakeChild(Transform parent, string name, Sprite sprite, Color color, int order,
+                                           Vector3 localPos, Vector3 localScale)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = localScale;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.color = color;
+            sr.sortingOrder = order;
+            return go.transform;
+        }
+
+        private static ParticleSystem MakeThrustParticles(Transform pack)
+        {
+            var go = new GameObject("Jato");
+            go.transform.SetParent(pack, false);
+            go.transform.localPosition = new Vector3(0f, -0.6f, 0f);
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // emite para baixo
+
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.startLifetime = 0.35f;
+            main.startSpeed = 6f;
+            main.startSize = 0.18f;
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color32(0xFF, 0xD2, 0x3F, 255),
+                                                                new Color32(0xE7, 0x1D, 0x36, 255));
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 200;
+            var emission = ps.emission;
+            emission.rateOverTime = 80f;
+            emission.enabled = false;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 12f;
+            shape.radius = 0.05f;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+            renderer.sortingOrder = 8;
+            ps.Play();
+            return ps;
+        }
+
+        private static Sprite MakeSquareSprite()
+        {
+            var tex = new Texture2D(4, 4) { filterMode = FilterMode.Point, name = "Quadrado" };
+            var pixels = new Color[16];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
+        }
+
+        private static Font LoadBuiltinFont()
+        {
+            // Unity 2022.2+ usa LegacyRuntime.ttf; versões antigas, Arial.ttf.
+            var f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return f != null ? f : Resources.GetBuiltinResource<Font>("Arial.ttf");
+        }
+    }
+}

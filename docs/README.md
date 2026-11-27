@@ -48,7 +48,8 @@ do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
 | 4 | [fase-4/02-modelo-de-dados.md](fase-4/02-modelo-de-dados.md) — Defs, SaveData, tabelas | ✅ |
 | 4 | [fase-4/03-plano-desenvolvimento.md](fase-4/03-plano-desenvolvimento.md) | ✅ |
 | 4 | [fase-4/04-plano-de-testes.md](fase-4/04-plano-de-testes.md) — matriz de testes | ✅ |
-| 5–10 | Protótipo e implementação (Unity 2D / C#) | ⏳ (bloqueado até aprovação da Fase 1) |
+| 5 | [fase-5/00-relatorio-fase-5.md](fase-5/00-relatorio-fase-5.md) — protótipo de movimentação (`unity/Propulsor`) | ✅ lógica testada · ⏳ validação no Unity |
+| 6–10 | Gameplay, menus, economia, testes, entrega | ⏳ |
 
 > Nota: o arquivo `cp1leoo.txt` na raiz do repositório é um código C# não
 > relacionado a este projeto (Azure Function de verificação de portas) e foi

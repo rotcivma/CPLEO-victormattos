@@ -1,15 +1,15 @@
 # Fase 4 · 04 — Plano e matriz de testes
 
 Tipos: **U** = unitário EditMode (C# puro) · **P** = PlayMode (Unity) · **M** = manual · **C** = comparação com a referência (vídeo).
-Status inicial de todos: **não executado**.
+Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falhou. Execução fora do Unity = `dotnet test unity/tools/CoreTests`.
 
 | ID | Área | Caso | Tipo | Esperado | Status |
 |---|---|---|---|---|---|
-| F-01 | Física | Sem input a partir de y=3, cai e para no chão | U | y = chão, vy = 0, estado Grounded | ⏳ |
-| F-02 | Física | Input contínuo sobe até o teto e para | U | y = teto, vy = 0 | ⏳ |
-| F-03 | Física | vy nunca excede limites | U | vy ∈ [maxDown, maxUp] | ⏳ |
-| F-04 | Física | Velocidade horizontal cresce e satura | U | vx(t) monotônica, ≤ maxSpeed | ⏳ |
-| F-05 | Física | Integração independente do framerate (30/60/120 Hz) | U | diferença de posição < 1 % | ⏳ |
+| F-01 | Física | Sem input a partir de y=3, cai e para no chão | U | y = chão, vy = 0, estado Grounded | ✅ U (dotnet, 2026-11-27) |
+| F-02 | Física | Input contínuo sobe até o teto e para | U | y = teto, vy = 0 | ✅ U (dotnet, 2026-11-27) |
+| F-03 | Física | vy nunca excede limites | U | vy ∈ [maxDown, maxUp] | ✅ U (dotnet, 2026-11-27) |
+| F-04 | Física | Velocidade horizontal cresce e satura | U | vx(t) monotônica, ≤ maxSpeed | ✅ U (dotnet, 2026-11-27) |
+| F-05 | Física | Integração independente do framerate (30/60/120 Hz) | U | diferença de posição < 1 % | ✅ U (dotnet, 2026-11-27) |
 | F-06 | Física | Tempo chão→teto comparado à referência | C | ±15 % | ⏳ |
 | M-01 | Movimento | Toques curtos permitem pairar | M | oscilação estável ±0,5 u | ⏳ |
 | C-01 | Colisão | Arco estático mata a pé | P | `PlayerDied(Arc)` | ⏳ |
