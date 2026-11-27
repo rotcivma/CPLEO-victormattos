@@ -116,6 +116,8 @@ namespace Propulsor.Core
             Profile.AddStat(StatKeys.VehiclesMounted, Tracker.Get(Counters.VehicleMounts));
             Profile.AddStat(StatKeys.VehiclesLost, Tracker.Get(Counters.VehicleLosses));
             Profile.AddStat(StatKeys.LasersSurvived, Tracker.Get(Counters.LasersSurvived));
+            Profile.AddStat(StatKeys.WorkersKnocked, Tracker.Get(Counters.Workers));
+            Profile.AddStat(StatKeys.NearMisses, Tracker.Get(Counters.NearMisses));
             foreach (HazardType h in System.Enum.GetValues(typeof(HazardType)))
                 Profile.AddStat(StatKeys.DeathsBy(h), Tracker.Get(Counters.DeathBy(h)));
 

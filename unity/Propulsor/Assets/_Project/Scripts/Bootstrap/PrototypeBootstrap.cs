@@ -46,9 +46,17 @@ namespace Propulsor.Bootstrap
             var flow = driver.gameObject.AddComponent<FlowController>();
             flow.Bind(driver, services);
 
+            var audio = new GameObject("Audio").AddComponent<AudioManager>();
+            audio.Bind(driver.Bus, services.Profile);
+            flow.Audio = audio.Director;
+
             var playerView = Object.FindAnyObjectByType<PlayerView>();
             playerView.ApplyAppearance(services.Inventory);
-            flow.AppearanceChanged += () => playerView.ApplyAppearance(services.Inventory);
+            flow.AppearanceChanged += () =>
+            {
+                playerView.ApplyAppearance(services.Inventory);
+                audio.UseProfile(services.Profile); // o perfil muda ao apagar o progresso
+            };
 
             new GameObject("Interface").AddComponent<UIManager>().Bind(flow);
             return flow;
@@ -111,7 +119,7 @@ namespace Propulsor.Bootstrap
             // Cenário e mundo
             var corridor = new GameObject("Corredor").AddComponent<CorridorView>();
             corridor.Build(cam.transform, def.floorY, def.ceilingY, square, font);
-            new GameObject("Mundo").AddComponent<WorldView>().Bind(driver, cam, square, circle);
+            new GameObject("Mundo").AddComponent<WorldView>().Bind(driver, cam, square, circle, follow, font);
 
             // HUD de depuração (apenas no modo sem menus)
             if (debugHud) new GameObject("DebugHud").AddComponent<DebugHud>().Bind(driver);

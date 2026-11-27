@@ -65,6 +65,7 @@ namespace Propulsor.Core.Gameplay.Vehicles
             Y = MathF2.Clamp(y, p.FloorY, p.CeilingY - Height);
             VelocityY = 0f;
             Time = 0f;
+            HitPoints = 1; // veículos são reaproveitados entre montagens
         }
 
         public void Step(float dt, bool held, bool pressed)

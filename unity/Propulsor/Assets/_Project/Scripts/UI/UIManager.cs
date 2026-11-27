@@ -37,6 +37,7 @@ namespace Propulsor.UI
         {
             Controller = controller;
             UIFactory.EnsureEventSystem();
+            UIFactory.ClickSound = () => Controller.Audio?.UiClick();
 
             var canvasGo = new GameObject("UI", typeof(RectTransform));
             canvasGo.transform.SetParent(transform, false);

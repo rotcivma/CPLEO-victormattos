@@ -98,4 +98,18 @@ namespace Propulsor.Core.Events
     }
 
     public readonly struct HeadStartEnded { }
+
+    /// <summary>Robô operário derrubado (não letal).</summary>
+    public readonly struct WorkerKnocked
+    {
+        public readonly int Id;
+        public WorkerKnocked(int id) { Id = id; }
+    }
+
+    /// <summary>Passou raspando por um perigo sem ser atingida.</summary>
+    public readonly struct HazardNearMiss
+    {
+        public readonly HazardType Type;
+        public HazardNearMiss(HazardType type) { Type = type; }
+    }
 }

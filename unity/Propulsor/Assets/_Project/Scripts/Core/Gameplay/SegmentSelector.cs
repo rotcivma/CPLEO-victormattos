@@ -29,8 +29,9 @@ namespace Propulsor.Core.Gameplay
             _candidates.Clear();
             _weights.Clear();
             float total = 0f;
-            foreach (var s in _segments)
+            for (int i = 0; i < _segments.Count; i++) // laço com índice: não aloca enumerador
             {
+                var s = _segments[i];
                 if (s.MinDistance > distance || _recent.Contains(s.Id)) continue;
                 float w = s.BaseWeight * Difficulty.SegmentAffinity(s.Difficulty, distance);
                 _candidates.Add(s);

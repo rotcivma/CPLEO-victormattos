@@ -52,7 +52,8 @@ do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
 | 6 | [fase-6/00-relatorio-fase-6.md](fase-6/00-relatorio-fase-6.md) — gameplay: trechos, perigos, coletáveis, 8 veículos | ✅ lógica testada (84) · ⏳ validação no Unity |
 | 7 | [fase-7/00-relatorio-fase-7.md](fase-7/00-relatorio-fase-7.md) — menus e fluxo de telas | ✅ lógica testada (109) · ⏳ validação no Unity |
 | 8 | [fase-8/00-relatorio-fase-8.md](fase-8/00-relatorio-fase-8.md) — economia, Oficina, gadgets, missões, patentes, conquistas, salvamento | ✅ lógica testada (161) · ⏳ validação no Unity |
-| 9–10 | Testes e refinamento (áudio, fontes, desempenho), entrega | ⏳ |
+| 9 | [fase-9/00-relatorio-fase-9.md](fase-9/00-relatorio-fase-9.md) — desempenho, robôs operários, raspão, áudio sintetizado, fontes, efeitos | ✅ lógica testada (177) · ⏳ validação no Unity |
+| 10 | Entrega final | ⏳ |
 
 > Nota: o arquivo `cp1leoo.txt` na raiz do repositório é um código C# não
 > relacionado a este projeto (Azure Function de verificação de portas) e foi

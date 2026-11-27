@@ -1,4 +1,4 @@
-# PROPULSOR — protótipo Unity (Fases 5–8)
+# PROPULSOR — protótipo Unity (Fases 5–9)
 
 Jogo original do gênero "runner com propulsor". Ver `docs/` para toda a
 investigação, arquitetura e planos.
@@ -53,11 +53,20 @@ Assets/_Project/Scripts/
     Economy/    ItemCatalog, Wallet, Inventory, Store, RunModifiers (gadgets)
     Progress/   RunTracker, MissionManager, RankTable, AchievementManager
     Save/       MiniJson, SaveManager (JSON + .bak + migração)
+    Audio/      AudioDirector (o que tocar e quando)
     GameServices.cs  composição dos sistemas de meta-jogo
   Data/       ScriptableObjects (PlayerPhysicsDef)
-  Gameplay/   RunDriver, FlowController, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
+  Gameplay/   RunDriver, FlowController, AudioManager, ProceduralSynth, PlayerView, WorldView, PlayerInput, CameraFollow, CorridorView, DebugHud
   UI/         UIManager, UIFactory, UIScreen e telas (Splash, Carregamento, Menu, HUD, Pausa,
               Revive, Garra da Sorte, Resultados, Configurações, Oficina, Missões, Conquistas)
   Bootstrap/  PrototypeBootstrap (monta a cena em código)
 Assets/Tests/ EditMode + PlayMode
 ```
+
+## Créditos de terceiros
+| Recurso | Licença | Arquivos |
+|---|---|---|
+| Fonte Lilita One (Juan Montoreano) | SIL Open Font License 1.1 | `Assets/_Project/Resources/Fonts/LilitaOne-*` |
+| Fonte Nunito (The Nunito Project Authors) | SIL Open Font License 1.1 | `Assets/_Project/Resources/Fonts/Nunito-*` |
+
+Todo o resto (código, arte geométrica, sons e músicas sintetizados) é original do projeto.

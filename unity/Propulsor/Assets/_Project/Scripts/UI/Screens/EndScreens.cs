@@ -107,6 +107,7 @@ namespace Propulsor.UI
 
             _animT = -1f;
             _result.text = Describe(_pending);
+            Ui.Controller.Audio?.ClawResult(_pending.Kind != PrizeKind.Nothing);
             if (_pending.Kind == PrizeKind.SecondChance) _wonSecondChance = true;
             Refresh();
         }

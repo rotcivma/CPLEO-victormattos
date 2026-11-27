@@ -27,6 +27,9 @@ namespace Propulsor.Gameplay
         public RunEndReport LastReport { get; private set; }
         public RunSummary LastSummary => LastReport?.Summary ?? default;
 
+        /// <summary>Decide os sons (nulo em testes sem áudio).</summary>
+        public Propulsor.Core.Audio.AudioDirector Audio { get; set; }
+
         /// <summary>Disparado quando o equipamento visual muda (a personagem se redesenha).</summary>
         public event Action AppearanceChanged;
 

@@ -221,6 +221,8 @@ namespace Propulsor.Core.Economy
         public const string ClawLosses = "garra_perdas";
         public const string MissionsCompleted = "missoes_concluidas";
         public const string ItemsBought = "itens_comprados";
+        public const string WorkersKnocked = "robos_derrubados";
+        public const string NearMisses = "raspoes";
         public static string DeathsBy(Gameplay.HazardType h) => "mortes_" + h.ToString().ToLowerInvariant();
     }
 }

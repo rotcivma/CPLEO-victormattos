@@ -18,6 +18,8 @@ namespace Propulsor.Core.Gameplay
         public float Timer;
         public float Delay;
         public float TrackTime;
+        /// <summary>Já avaliado para "raspão" ao passar pela personagem.</summary>
+        public bool NearChecked;
 
         public const float Width = 0.9f, Height = 0.35f;
         public Aabb Box => new Aabb(X - Width * 0.5f, Y - Height * 0.5f, X + Width * 0.5f, Y + Height * 0.5f);
@@ -45,6 +47,9 @@ namespace Propulsor.Core.Gameplay
         private readonly float _floor, _ceiling;
 
         public IReadOnlyList<Missile> Missiles => _missiles;
+        /// <summary>Mesma lista, tipada (iterar sem alocar).</summary>
+        internal List<Missile> List => _missiles;
+        private readonly Stack<Missile> _pool = new Stack<Missile>();
         public int Launched { get; private set; }
 
         public System.Action<Missile> WarningStarted;
@@ -101,7 +106,7 @@ namespace Propulsor.Core.Gameplay
                         if (m.X < playerX - DespawnBehind) m.Phase = MissilePhase.Gone;
                         break;
                 }
-                if (m.Phase == MissilePhase.Gone) _missiles.RemoveAt(i);
+                if (m.Phase == MissilePhase.Gone) { _pool.Push(m); _missiles.RemoveAt(i); }
             }
         }
 
@@ -117,7 +122,7 @@ namespace Propulsor.Core.Gameplay
         private void CancelPending()
         {
             for (int i = _missiles.Count - 1; i >= 0; i--)
-                if (_missiles[i].Phase != MissilePhase.Flying) _missiles.RemoveAt(i);
+                if (_missiles[i].Phase != MissilePhase.Flying) { _pool.Push(_missiles[i]); _missiles.RemoveAt(i); }
         }
 
         private bool HasPending()
@@ -133,15 +138,17 @@ namespace Propulsor.Core.Gameplay
             for (int i = 0; i < count; i++)
             {
                 float offset = count == 1 ? 0f : (i - (count - 1) * 0.5f) * BurstFan;
-                _missiles.Add(new Missile
-                {
-                    Id = _nextId++,
-                    Phase = MissilePhase.Waiting,
-                    Offset = offset,
-                    Y = Clamp(playerCenterY + offset),
-                    Delay = i * BurstSpacing,
-                    TrackTime = track
-                });
+                var m = _pool.Count > 0 ? _pool.Pop() : new Missile();
+                m.Id = _nextId++;
+                m.Phase = MissilePhase.Waiting;
+                m.Offset = offset;
+                m.Y = Clamp(playerCenterY + offset);
+                m.X = 0f;
+                m.Timer = 0f;
+                m.Delay = i * BurstSpacing;
+                m.TrackTime = track;
+                m.NearChecked = false;
+                _missiles.Add(m);
             }
         }
 

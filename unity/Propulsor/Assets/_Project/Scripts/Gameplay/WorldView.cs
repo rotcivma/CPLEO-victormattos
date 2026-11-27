@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Propulsor.Core.Events;
 using Propulsor.Core.Gameplay;
 using Propulsor.Core.Gameplay.Vehicles;
 using UnityEngine;
@@ -37,20 +38,146 @@ namespace Propulsor.Gameplay
         private readonly List<SpriteRenderer> _laserEmitters = new List<SpriteRenderer>();
         private SpriteRenderer _water;
 
+        // Robôs operários, efeitos e câmera (Fase 9)
+        private sealed class WorkerGo { public Transform Root; public SpriteRenderer Body, Visor; }
+        private readonly Dictionary<int, WorkerGo> _workers = new Dictionary<int, WorkerGo>();
+        private readonly Stack<WorkerGo> _workerPool = new Stack<WorkerGo>();
+        private CameraFollow _shake;
+        private ParticleSystem _explosion, _sparkle;
+        private TextMesh _floating;
+        private float _floatingT = -1f;
+        private static readonly Color WorkerGrey = new Color32(0x8E, 0x9A, 0xAF, 255);
+
         private readonly HashSet<long> _seenLong = new HashSet<long>();
         private readonly HashSet<int> _seenInt = new HashSet<int>();
         private readonly List<long> _removeLong = new List<long>();
         private readonly List<int> _removeInt = new List<int>();
 
-        public void Bind(RunDriver driver, Camera cam, Sprite square, Sprite circle)
+        public void Bind(RunDriver driver, Camera cam, Sprite square, Sprite circle, CameraFollow shake = null, Font font = null)
         {
             _driver = driver;
             _cam = cam;
             _square = square;
             _circle = circle;
+            _shake = shake;
             _water = NewSprite("Agua", _square, new Color(0.12f, 0.56f, 1f, 0.35f), 15);
             _water.gameObject.SetActive(false);
             driver.Restarted += ClearAll;
+
+            _explosion = MakeBurst("Explosao", 60, 0.6f, 9f, 0.35f, Accent, Danger);
+            _sparkle = MakeBurst("Brilho", 6, 0.25f, 3f, 0.12f, Gold, Color.white);
+            var ft = new GameObject("TextoFlutuante");
+            ft.transform.SetParent(transform, false);
+            _floating = ft.AddComponent<TextMesh>();
+            _floating.font = font;
+            if (font != null) ft.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            ft.GetComponent<MeshRenderer>().sortingOrder = 30;
+            _floating.anchor = TextAnchor.MiddleCenter;
+            _floating.characterSize = 0.1f;
+            _floating.fontSize = 60;
+            _floating.gameObject.SetActive(false);
+
+            var bus = driver.Bus;
+            bus.Subscribe<VehicleDestroyed>(_ => { Burst(_explosion, 60); _shake?.Shake(0.35f, 0.3f); });
+            bus.Subscribe<VehicleDamaged>(_ => { Burst(_explosion, 15); _shake?.Shake(0.15f, 0.15f); });
+            bus.Subscribe<PlayerDied>(_ => _shake?.Shake(0.25f, 0.3f));
+            bus.Subscribe<CoinCollected>(_ => Burst(_sparkle, 6));
+            bus.Subscribe<HazardNearMiss>(_ => Float("raspão!", Electric));
+            bus.Subscribe<HeadStartStarted>(_ => _shake?.Shake(0.15f, 0.4f));
+        }
+
+        private ParticleSystem MakeBurst(string name, int max, float life, float speed, float size, Color a, Color b)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.startLifetime = life;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(speed * 0.4f, speed);
+            main.startSize = size;
+            main.startColor = new ParticleSystem.MinMaxGradient(a, b);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = max * 3;
+            main.gravityModifier = 0.5f;
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.2f;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+            r.sortingOrder = 25;
+            ps.Play(); // emissão contínua zerada: só solta partículas via Emit()
+            return ps;
+        }
+
+        private void Burst(ParticleSystem ps, int count)
+        {
+            if (ps == null || _driver.Sim == null) return;
+            var box = _driver.Sim.PlayerBox;
+            ps.transform.position = new Vector3(box.CenterX, box.CenterY, 0f);
+            ps.Emit(count);
+        }
+
+        private void Float(string text, Color color)
+        {
+            if (_floating == null || _driver.Sim == null) return;
+            _floating.text = text;
+            _floating.color = color;
+            _floatingT = 0f;
+            _floating.gameObject.SetActive(true);
+        }
+
+        private void DrawFloating()
+        {
+            if (_floatingT < 0f) return;
+            _floatingT += Time.deltaTime;
+            var box = _driver.Sim.PlayerBox;
+            _floating.transform.position = new Vector3(box.CenterX, box.MaxY + 0.4f + _floatingT, 0f);
+            var c = _floating.color;
+            c.a = Mathf.Clamp01(1f - _floatingT / 0.7f);
+            _floating.color = c;
+            if (_floatingT > 0.7f) { _floatingT = -1f; _floating.gameObject.SetActive(false); }
+        }
+
+        // ---------- robôs operários ----------
+        private void DrawWorkers(RunSimulation sim)
+        {
+            _seenInt.Clear();
+            foreach (var w in sim.Workers)
+            {
+                _seenInt.Add(w.Id);
+                if (!_workers.TryGetValue(w.Id, out var go)) _workers[w.Id] = go = RentWorker();
+                go.Root.position = new Vector3(w.X, w.Y + Worker.Height * 0.5f, 0f);
+                go.Root.rotation = Quaternion.Euler(0f, 0f, -w.Spin);
+                // passinho: balança enquanto anda
+                float bob = w.Knocked ? 0f : Mathf.Abs(Mathf.Sin(Time.time * 8f + w.Id)) * 0.05f;
+                go.Body.transform.localPosition = new Vector3(0f, bob, 0f);
+                go.Visor.transform.localPosition = new Vector3(0.12f * w.Dir, 0.25f + bob, 0f);
+                go.Visor.color = w.Knocked ? Danger : Gold;
+            }
+            _removeInt.Clear();
+            foreach (var k in _workers.Keys) if (!_seenInt.Contains(k)) _removeInt.Add(k);
+            foreach (var k in _removeInt)
+            {
+                var go = _workers[k];
+                go.Root.gameObject.SetActive(false);
+                _workerPool.Push(go);
+                _workers.Remove(k);
+            }
+        }
+
+        private WorkerGo RentWorker()
+        {
+            if (_workerPool.Count > 0) { var w = _workerPool.Pop(); w.Root.gameObject.SetActive(true); return w; }
+            var root = new GameObject("RoboOperario").transform;
+            root.SetParent(transform, false);
+            var body = NewSprite("Corpo", _square, WorkerGrey, 3, root);
+            body.transform.localScale = new Vector3(Worker.Width, Worker.Height, 1f);
+            var visor = NewSprite("Visor", _square, Gold, 4, root);
+            visor.transform.localScale = new Vector3(0.35f, 0.15f, 1f);
+            return new WorkerGo { Root = root, Body = body, Visor = visor };
         }
 
         private void LateUpdate()
@@ -62,7 +189,9 @@ namespace Propulsor.Gameplay
             float camX = _cam.transform.position.x;
 
             DrawZappers(sim);
+            DrawWorkers(sim);
             DrawPickups(sim);
+            DrawFloating();
             DrawLasers(sim, camX, halfW);
             DrawMissiles(sim, camX, halfW);
             DrawWater(sim, camX, halfW);
@@ -295,6 +424,8 @@ namespace Propulsor.Gameplay
             _zappers.Clear();
             foreach (var p in _pickups.Values) { p.gameObject.SetActive(false); _pickupPool.Push(p); }
             _pickups.Clear();
+            foreach (var w in _workers.Values) { w.Root.gameObject.SetActive(false); _workerPool.Push(w); }
+            _workers.Clear();
             _seenInt.Clear();
             Prune(_missiles);
             Prune(_warnings);

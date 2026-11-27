@@ -23,8 +23,21 @@ namespace Propulsor.Core.Progress
         public const string LasersSurvived = "feixes_sobrevividos";
         public const string HeadStarts = "arrancadas";
         public const string ClawPlays = "garra_jogadas";
-        public static string MountsOf(Gameplay.Vehicles.VehicleKind k) => "veiculo_" + k;
-        public static string DeathBy(HazardType h) => "morte_" + h;
+        public const string Workers = "robos_derrubados";
+        public const string NearMisses = "raspoes";
+        private static readonly string[] MountKeys = BuildKeys<Gameplay.Vehicles.VehicleKind>("veiculo_");
+        private static readonly string[] DeathKeys = BuildKeys<HazardType>("morte_");
+        public static string MountsOf(Gameplay.Vehicles.VehicleKind k) => MountKeys[(int)k];
+        public static string DeathBy(HazardType h) => DeathKeys[(int)h];
+
+        // Textos pré-montados: medir eventos não aloca memória.
+        private static string[] BuildKeys<T>(string prefix) where T : Enum
+        {
+            var values = (T[])Enum.GetValues(typeof(T));
+            var keys = new string[values.Length];
+            foreach (var v in values) keys[Convert.ToInt32(v)] = prefix + v;
+            return keys;
+        }
     }
 
     /// <summary>
@@ -52,6 +65,8 @@ namespace Propulsor.Core.Progress
             bus.Subscribe<PlayerDied>(e => { _dead = true; Add(Counters.DeathBy(e.Cause), 1); });
             bus.Subscribe<PlayerRevived>(_ => _dead = false);
             bus.Subscribe<HeadStartStarted>(_ => Add(Counters.HeadStarts, 1));
+            bus.Subscribe<WorkerKnocked>(_ => Add(Counters.Workers, 1));
+            bus.Subscribe<HazardNearMiss>(_ => { if (!_dead) Add(Counters.NearMisses, 1); });
         }
 
         public float Get(string key) => _c.TryGetValue(key, out var v) ? v : 0f;

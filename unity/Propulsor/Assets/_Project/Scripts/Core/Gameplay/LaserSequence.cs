@@ -16,7 +16,7 @@ namespace Propulsor.Core.Gameplay
         public const float FireTime = 1.5f;
         public const float LeaveTime = 0.4f;
 
-        private readonly IReadOnlyList<LaserWaveDef> _waves;
+        private IReadOnlyList<LaserWaveDef> _waves;
 
         public LaserPhase Phase { get; private set; } = LaserPhase.Entering;
         public float PhaseTime { get; private set; }
@@ -31,10 +31,15 @@ namespace Propulsor.Core.Gameplay
         /// <summary>Todas as linhas usadas pela sequência (para posicionar os emissores).</summary>
         public IReadOnlyList<LaserWaveDef> Waves => _waves;
 
-        public LaserSequence(IReadOnlyList<LaserWaveDef> waves)
+        public LaserSequence(IReadOnlyList<LaserWaveDef> waves) { Reset(waves); }
+
+        /// <summary>Reinicia a sequência com novas ondas (reaproveita o objeto).</summary>
+        public void Reset(IReadOnlyList<LaserWaveDef> waves)
         {
             _waves = waves;
-            if (waves == null || waves.Count == 0) Phase = LaserPhase.Done;
+            WaveIndex = 0;
+            PhaseTime = 0f;
+            Phase = waves == null || waves.Count == 0 ? LaserPhase.Done : LaserPhase.Entering;
         }
 
         /// <summary>Duração total da sequência (s).</summary>

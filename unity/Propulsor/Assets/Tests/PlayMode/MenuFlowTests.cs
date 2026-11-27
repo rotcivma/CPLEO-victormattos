@@ -43,7 +43,7 @@ namespace Propulsor.Tests.PlayMode
         public void TearDown()
         {
             foreach (var t in new[] { typeof(UIManager), typeof(RunDriver), typeof(CorridorView), typeof(WorldView),
-                                      typeof(PlayerView), typeof(CameraFollow) })
+                                      typeof(PlayerView), typeof(CameraFollow), typeof(AudioManager) })
                 foreach (var o in Object.FindObjectsByType(t, FindObjectsSortMode.None))
                     Object.Destroy(((Component)o).gameObject);
         }
@@ -129,6 +129,21 @@ namespace Propulsor.Tests.PlayMode
             _ui.Workshop.Show();
             yield return null;
             Assert.IsTrue(_ui.Workshop.Visible);
+        }
+
+        [Test] // áudio sintetizado
+        public void Audio_SintetizaTodosOsSonsEMusicas()
+        {
+            Assert.IsNotNull(_flow.Audio, "AudioDirector ligado ao fluxo");
+            foreach (Propulsor.Core.Audio.Sfx sfx in System.Enum.GetValues(typeof(Propulsor.Core.Audio.Sfx)))
+            {
+                var clip = ProceduralSynth.Make(sfx);
+                Assert.IsNotNull(clip, sfx.ToString());
+                Assert.Greater(clip.length, 0.01f, sfx.ToString());
+            }
+            foreach (var m in new[] { Propulsor.Core.Audio.Music.Menu, Propulsor.Core.Audio.Music.Run, Propulsor.Core.Audio.Music.Claw })
+                Assert.Greater(ProceduralSynth.MakeMusic(m).length, 5f, m.ToString());
+            Assert.Greater(ProceduralSynth.JetLoop().length, 0.5f);
         }
 
         [UnityTest]

@@ -50,6 +50,8 @@ namespace Propulsor.Core.Progress
             A("alvo_facil", "Alvo Fácil", "Seja atingida por drones 25 vezes.", StatKeys.DeathsBy(HazardType.Missile), 25, 200),
             A("missionaria", "Missionária", "Conclua 30 missões.", StatKeys.MissionsCompleted, 30, 800),
             A("consumista", "Cliente da Oficina", "Compre 10 itens.", StatKeys.ItemsBought, 10, 500),
+            A("desmontadora", "Desmontadora", "Derrube 500 robôs operários.", StatKeys.WorkersKnocked, 500, 600),
+            A("por_um_fio", "Por um Fio", "Passe raspando por 100 perigos.", StatKeys.NearMisses, 100, 600),
             A("selo_de_prestigio", "Selo de Prestígio", "Troque a patente máxima por um selo.", PrestigeStat, 1, 2000),
         };
 

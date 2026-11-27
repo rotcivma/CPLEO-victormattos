@@ -23,7 +23,7 @@ Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falho
 | O-03 | Geração | Validador: todo segmento tem caminho livre | U | 100 % | ✅ U (dotnet, 2026-11-27) |
 | O-04 | Drones | Não lançados durante feixe ativo nem na Moto-Trilho | U/P | 0 lançamentos | ✅ U (dotnet, 2026-11-27) |
 | O-05 | Drones | `t_track` decresce com distância | U | 1,4 s @0 m → 0,6 s @3000 m | ✅ U (dotnet, 2026-11-27) |
-| O-06 | Desempenho | Sem alocação GC por quadro na corrida | P | 0 B/frame após aquecimento | ⏳ (pools implementados; medir no Profiler do Unity) |
+| O-06 | Desempenho | Sem alocação GC por quadro na corrida | P | 0 B/frame após aquecimento | ✅ U lógica: 88 B em 5.000 passos após aquecimento (dotnet) · ⏳ P Profiler no Unity |
 | K-01 | Moedas | Porca coletada soma 1 à run wallet | U | | ✅ U (dotnet, 2026-11-27) |
 | K-02 | Moedas | Dobro ×2 aplica só nas porcas da corrida | U | | ✅ U (dotnet, 2026-11-27) |
 | K-03 | Moedas | Ímã atrai dentro do raio | P | | ✅ U (dotnet, 2026-11-27) |
@@ -52,3 +52,23 @@ Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falho
 | D-01 | Desempenho | 60 fps em aparelho Android médio por 10 min | M | ≥ 58 fps p95 | ⏳ |
 
 Regra do projeto: **nenhuma funcionalidade é declarada reproduzida sem o teste correspondente executado e registrado aqui.**
+
+## Casos acrescentados na Fase 9
+
+| ID | Área | Caso | Tipo | Esperado | Status |
+|---|---|---|---|---|---|
+| W-01 | Robôs | Esbarrar derruba, não mata | U | `WorkerKnocked`, viva | ✅ U (dotnet, 2026-11-27) |
+| W-02 | Robôs | Jato do propulsor derruba quem está embaixo | U | | ✅ U (dotnet, 2026-11-27) |
+| W-03 | Robôs | Voando alto não derruba | U | 0 derrubados | ✅ U (dotnet, 2026-11-27) |
+| W-04 | Robôs | Derrubado quica e assenta | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-01 | Raspão | Passar perto de arco conta 1 por arco | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-02 | Raspão | Longe do arco não conta | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-03 | Raspão | Drone passando perto conta | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-01 | Áudio | Eventos tocam os efeitos certos | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-02 | Áudio | Música por estado (menu/corrida/garra) | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-03 | Áudio | Ducking −6 dB em aviso de drone, −10 dB na pausa | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-04 | Áudio | Porcas seguidas sobem de tom (máx. 1 oitava) | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-05 | Áudio | Som do propulsor segue o estado | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-06 | Áudio | Síntese de todos os clipes no Unity | P | sem exceção, duração > 0 | ⏳ |
+| PF-01 | Desempenho | Passo da simulação < 200 µs | U | medido: ~4 µs | ✅ U (dotnet, 2026-11-27) |
+| PF-02 | Desempenho | Publicar evento não aloca | U | | ✅ U (dotnet, 2026-11-27) |

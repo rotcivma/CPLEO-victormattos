@@ -100,6 +100,10 @@ namespace Propulsor.Core.Progress
                 M("morte_arco_3", "Esbarre num arco de faísca {0} vezes", Counters.DeathBy(HazardType.Zapper), 3, MissionScope.Lifetime, 1),
                 M("garra_5", "Jogue {0} vezes na Garra da Sorte", Counters.ClawPlays, 5, MissionScope.Lifetime, 2),
                 M("arrancada_1", "Use uma Arrancada", Counters.HeadStarts, 1, MissionScope.Lifetime, 1, 2),
+                M("robos_10", "Derrube {0} robôs operários numa corrida", Counters.Workers, 10, MissionScope.Run, 1),
+                M("robos_total_100", "Derrube {0} robôs operários no total", Counters.Workers, 100, MissionScope.Lifetime, 2, 3),
+                M("raspao_5", "Passe raspando por {0} perigos numa corrida", Counters.NearMisses, 5, MissionScope.Run, 2, 2),
+                M("raspao_total_40", "Passe raspando por {0} perigos no total", Counters.NearMisses, 40, MissionScope.Lifetime, 2, 5),
             };
             foreach (var k in VehicleFactory.All)
                 list.Add(M("usar_" + k.ToString().ToLowerInvariant(), "Monte {0}× no veículo " + VehicleNames.Get(k),

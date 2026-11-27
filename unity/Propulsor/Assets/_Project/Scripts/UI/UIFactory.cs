@@ -20,25 +20,38 @@ namespace Propulsor.UI
         public static readonly Color Ok = new Color32(0x6B, 0xCB, 0x77, 255);
         public static readonly Color Dim = new Color(0f, 0f, 0f, 0.6f);
 
-        private static Font _font;
-        /// <summary>Fonte embutida do Unity (as fontes OFL definidas no guia entram na Fase 9).</summary>
-        public static Font Font
+        private static Font _builtin, _title, _body;
+
+        /// <summary>Fonte embutida do Unity (reserva caso as fontes do projeto faltem).</summary>
+        public static Font Builtin
         {
             get
             {
-                if (_font == null)
+                if (_builtin == null)
                 {
-                    _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                    if (_font == null) _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                    _builtin = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    if (_builtin == null) _builtin = Resources.GetBuiltinResource<Font>("Arial.ttf");
                 }
-                return _font;
+                return _builtin;
             }
         }
+
+        /// <summary>Títulos, números e botões: Lilita One (OFL 1.1, Resources/Fonts).</summary>
+        public static Font TitleFont => _title != null ? _title : (_title = Resources.Load<Font>("Fonts/LilitaOne-Regular") ?? Builtin);
+
+        /// <summary>Texto corrido: Nunito Bold (OFL 1.1, Resources/Fonts).</summary>
+        public static Font BodyFont => _body != null ? _body : (_body = Resources.Load<Font>("Fonts/Nunito-Bold") ?? Builtin);
+
+        /// <summary>Compatibilidade: fonte padrão do corpo.</summary>
+        public static Font Font => BodyFont;
     }
 
     /// <summary>Construtores de UI em código (uGUI), com âncoras em fração da tela.</summary>
     public static class UIFactory
     {
+        /// <summary>Chamado em todo clique de botão (som de interface).</summary>
+        public static System.Action ClickSound;
+
         public static RectTransform Rect(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -78,7 +91,7 @@ namespace Propulsor.UI
         {
             var rt = Rect(name, parent);
             var t = rt.gameObject.AddComponent<Text>();
-            t.font = Theme.Font;
+            t.font = bold || size >= 56 ? Theme.TitleFont : Theme.BodyFont;
             t.text = text;
             t.fontSize = size;
             t.color = color;
@@ -114,6 +127,7 @@ namespace Propulsor.UI
             var colors = btn.colors;
             colors.disabledColor = new Color(1f, 1f, 1f, 0.4f);
             btn.colors = colors;
+            btn.onClick.AddListener(() => ClickSound?.Invoke());
             btn.onClick.AddListener(onClick);
             rt.gameObject.AddComponent<PressFeedback>().Face = face;
             return btn;
