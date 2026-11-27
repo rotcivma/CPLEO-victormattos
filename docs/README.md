@@ -1,0 +1,49 @@
+# Engenharia reversa funcional — runner de jetpack (referência: Jetpack Joyride)
+
+Este diretório reúne a documentação do projeto de engenharia reversa **funcional**
+do jogo *Jetpack Joyride* (Halfbrick Studios, 2011), conforme o "Prompt Mestre".
+
+## Escopo e limites legais (ler antes de tudo)
+
+- O objetivo é **entender mecânicas, sistemas e fluxos** e documentá-los.
+  Mecânicas de jogo não são protegidas por direitos autorais; nome, personagens,
+  arte, música, textos e logotipos são.
+- A implementação (Fases 5–10) será um **jogo próprio do mesmo gênero**
+  (runner horizontal infinito com jetpack), com **nome, personagem, arte, sons e
+  textos originais**. Ela **não** usará o nome "Jetpack Joyride", o personagem
+  Barry Steakfries, os nomes de veículos/itens da Halfbrick nem imitará o visual
+  específico do jogo. Na arquitetura, cada sistema original terá um equivalente
+  com nome próprio (ex.: "veículo mecha saltador" em vez de "Lil' Stomper").
+- Nenhum código, binário ou asset do jogo original é descompilado, extraído
+  ou redistribuído. A "engenharia reversa" aqui é **observacional**: fontes
+  públicas (wikis, guias, FAQs oficiais) e, quando possível, observação de jogo.
+
+## Legenda de confiabilidade (usada em todos os documentos)
+
+| Marca | Significado |
+|---|---|
+| **[C]** | Confirmado por ao menos uma fonte pública consultada (citada no documento). |
+| **[C*]** | Confirmado, mas fontes divergem ou é dependente de versão. |
+| **[G]** | Conhecimento geral sobre o jogo, **não verificado** nesta sessão. Precisa de validação por observação. |
+| **[H]** | Hipótese / inferência de design. |
+| **[E]** | Estimativa numérica proposta para a implementação (não é o valor original). |
+
+## Estrutura
+
+| Fase | Documento | Status |
+|---|---|---|
+| 1 | [fase-1/00-relatorio-fase-1.md](fase-1/00-relatorio-fase-1.md) — relatório da fase | ✅ |
+| 1 | [fase-1/01-versao-e-fontes.md](fase-1/01-versao-e-fontes.md) — versão analisada, fontes, método | ✅ |
+| 1 | [fase-1/02-catalogo-telas.md](fase-1/02-catalogo-telas.md) — catálogo inicial de telas e mapa de navegação | ✅ (inicial) |
+| 1 | [fase-1/03-gameplay-fisica.md](fase-1/03-gameplay-fisica.md) — personagem, controles, física | ✅ (inicial) |
+| 1 | [fase-1/04-obstaculos.md](fase-1/04-obstaculos.md) — perigos e dificuldade | ✅ (inicial) |
+| 1 | [fase-1/05-veiculos.md](fase-1/05-veiculos.md) — veículos | ✅ (inicial) |
+| 1 | [fase-1/06-economia.md](fase-1/06-economia.md) — moedas, tokens, Final Spin, loja | ✅ (inicial) |
+| 1 | [fase-1/07-progressao.md](fase-1/07-progressao.md) — missões, patentes, conquistas | ✅ (inicial) |
+| 1 | [fase-1/08-lacunas-e-proximos-passos.md](fase-1/08-lacunas-e-proximos-passos.md) — dúvidas, limitações, plano | ✅ |
+| 2–4 | Documentação visual detalhada, mapeamento de sistemas, arquitetura | ⏳ |
+| 5–10 | Protótipo e implementação (Unity 2D / C#) | ⏳ (bloqueado até aprovação da Fase 1) |
+
+> Nota: o arquivo `cp1leoo.txt` na raiz do repositório é um código C# não
+> relacionado a este projeto (Azure Function de verificação de portas) e foi
+> deixado intocado.
