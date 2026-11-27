@@ -171,7 +171,10 @@ button.small { font-size: 15px; padding: 8px 14px; min-height: 40px; }
   <!-- Menu principal -->
   <div id="menu" class="layer">
     <div class="top">
-      <button id="btnSound" class="icon" aria-label="Som ligado">♪</button>
+      <div style="display:flex;gap:8px">
+        <button id="btnSound" class="icon" aria-label="Efeitos sonoros ligados">🔊</button>
+        <button id="btnMusic" class="icon" aria-label="Música ligada">♫</button>
+      </div>
       <div class="wallet"><span id="mCoins">0 porcas</span><span class="tok" id="mTokens">0 fichas</span></div>
     </div>
     <div class="brand">
@@ -444,7 +447,7 @@ const mText = m => m.text.replace("{n}", fmt(m.target));
 
 function newProfile() {
   return { coins: 0, tokens: 0, best: 0, owned: ["jet_padrao", "macacao_verde"], cons: {}, eq: { jet: "jet_padrao", outfit: "macacao_verde" },
-           gadgets: [], slots: 2, rank: 1, stars: 0, prestige: 0, active: [], completed: [], pendHead: false, pendDouble: false, sound: true };
+           gadgets: [], slots: 2, rank: 1, stars: 0, prestige: 0, active: [], completed: [], pendHead: false, pendDouble: false, sound: true, music: true };
 }
 let PF = newProfile();
 try { const raw = localStorage.getItem(SAVE_KEY); if (raw) PF = Object.assign(newProfile(), JSON.parse(raw)); } catch (e) { /* sem armazenamento: perfil da sessão */ }
@@ -505,6 +508,69 @@ const SFX = {
   lose() { tone(392, .15, "triangle", .12); tone(262, .3, "triangle", .12, null, .15); },
   click() { tone(1000, .03, "square", .04); },
 };
+
+// ---------------- música sintetizada (trilhas originais, mesmas do projeto Unity) ----------------
+// Cada trilha: 4 compassos em loop; baixo em semínimas, arpejo em colcheias e chimbal nos contratempos.
+const SONGS = {
+  menu: { bpm: 100, roots: [57, 53, 48, 55], minor: [1, 0, 0, 0], wave: "triangle", pat: [0, 2, 1, 2, 3, 2, 1, 2], hats: false, vol: .9 },
+  run:  { bpm: 140, roots: [52, 48, 55, 50], minor: [1, 0, 0, 0], wave: "square",   pat: [0, 1, 2, 3, 2, 1, 2, 3], hats: true,  vol: .6 },
+  claw: { bpm: 120, roots: [48, 53, 55, 48], minor: [0, 0, 0, 0], wave: "square",   pat: [0, 2, 3, 2, 1, 3, 2, 3], hats: true,  vol: .6 },
+};
+const MUS = { gain: null, song: null, want: null, step: 0, next: 0, timer: null, hat: null };
+const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+
+function musicInit() {
+  const ac = audio(); if (!ac || MUS.gain) return;
+  MUS.gain = ac.createGain(); MUS.gain.gain.value = 0; MUS.gain.connect(ac.destination);
+  const n = Math.floor(ac.sampleRate * .05), buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+  MUS.hat = buf;
+  MUS.timer = setInterval(musicSchedule, 25);
+}
+
+function musicNote(f, t, dur, wave, vol) {
+  const ac = AC, o = ac.createOscillator(), g = ac.createGain();
+  o.type = wave; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(MUS.gain); o.start(t); o.stop(t + dur + .02);
+}
+
+/** Agenda as notas que caem nos próximos 120 ms (relógio do áudio, sem atrasos do quadro). */
+function musicSchedule() {
+  const ac = AC; if (!ac || !MUS.gain) return;
+  if (MUS.want !== MUS.song) {                     // troca de trilha no começo do próximo tempo
+    MUS.song = MUS.want; MUS.step = 0; MUS.next = ac.currentTime + .05;
+  }
+  const S = SONGS[MUS.song]; if (!S) return;
+  const eighth = 60 / S.bpm / 2;
+  if (MUS.next < ac.currentTime - .2) MUS.next = ac.currentTime + .05; // aba voltou do segundo plano
+  while (MUS.next < ac.currentTime + .12) {
+    const bar = Math.floor(MUS.step / 8) % 4, e = MUS.step % 8, root = S.roots[bar];
+    const chord = [root, root + (S.minor[bar] ? 3 : 4), root + 7, root + 12];
+    if (e % 2 === 0) musicNote(midi(root - 12), MUS.next, eighth * 1.8, "triangle", .5 * S.vol);
+    musicNote(midi(chord[S.pat[e]] + 12), MUS.next, eighth * .8, S.wave, .16 * S.vol);
+    if (S.hats && e % 2 === 1) {
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = MUS.hat; f.type = "highpass"; f.frequency.value = 6000; g.gain.value = .25 * S.vol;
+      src.connect(f).connect(g).connect(MUS.gain); src.start(MUS.next);
+    }
+    MUS.next += eighth; MUS.step++;
+  }
+}
+
+/** Escolhe a trilha pelo estado do jogo e abaixa o volume em avisos de drone (−6 dB) e na pausa (−10 dB). */
+function musicUpdate() {
+  if (!AC || !MUS.gain) return;
+  MUS.want = state === "menu" || state === "results" ? "menu" : state === "claw" ? "claw" : "run";
+  const warning = R && R.missiles.some(m => m.ph === "track" || m.ph === "lock");
+  const duck = state === "paused" ? .32 : warning ? .5 : 1;
+  const target = PF.music ? .12 * duck : 0;
+  MUS.gain.gain.setTargetAtTime(target, AC.currentTime, .12);
+}
+
+// O navegador só libera áudio depois de um toque: o primeiro toque em qualquer lugar liga a música.
+document.addEventListener("pointerdown", () => musicInit(), { capture: true });
+document.addEventListener("keydown", () => musicInit(), { capture: true });
 
 // ---------------- estado da corrida ----------------
 let R = null;           // corrida atual
@@ -896,6 +962,7 @@ $("btnShopClose").onclick = () => { show("shop", false); renderMenu(); };
 $("btnMissions").onclick = $("btnRMissions").onclick = () => { renderMissions(); show("missions", true); };
 $("btnMissionsClose").onclick = () => { show("missions", false); renderMenu(); };
 $("btnSound").onclick = () => { PF.sound = !PF.sound; save(); renderMenu(); if (PF.sound) { audio(); SFX.click(); } };
+$("btnMusic").onclick = () => { PF.music = !PF.music; save(); musicInit(); renderMenu(); };
 $("btnPrestige").onclick = () => { if (PF.rank >= 15) { PF.prestige++; PF.rank = 1; PF.stars = 0; PF.completed = []; PF.active = []; refillMissions(); save(); renderMissions(); popup("Novo selo de prestígio!"); } };
 
 function canHead() { return state === "run" && R && R.x < 50 && R.head <= 0 && !R.veh && cnt("arrancada") > 0; }
@@ -904,8 +971,11 @@ function renderMenu() {
   $("mCoins").textContent = fmt(PF.coins) + " porcas";
   $("mTokens").textContent = PF.tokens + " fichas";
   $("menuBest").textContent = PF.best > 0 ? `Recorde: ${fmt(PF.best)} m · Patente: ${RANKS[PF.rank - 1][0]}` : `Patente: ${RANKS[PF.rank - 1][0]}`;
-  $("btnSound").textContent = PF.sound ? "♪" : "×";
-  $("btnSound").setAttribute("aria-label", PF.sound ? "Som ligado" : "Som desligado");
+  $("btnSound").textContent = PF.sound ? "🔊" : "🔇";
+  $("btnSound").setAttribute("aria-label", PF.sound ? "Efeitos sonoros ligados" : "Efeitos sonoros desligados");
+  $("btnMusic").textContent = PF.music ? "♫" : "×";
+  $("btnMusic").setAttribute("aria-label", PF.music ? "Música ligada" : "Música desligada");
+  $("btnMusic").style.opacity = PF.music ? 1 : .55;
 }
 function missionRow(a, withSkip) {
   const m = missionById[a.id], cur = Math.min(missionCurrent(a), m.target);
@@ -1269,6 +1339,7 @@ function frame(now) {
 
   render();
   updateHud();
+  musicUpdate();
   requestAnimationFrame(frame);
 }
 

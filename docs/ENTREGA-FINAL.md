@@ -40,7 +40,8 @@ e implementação de um **jogo original do mesmo gênero** em Unity 2D / C#.
 - **Oficina:** gadgets, consumíveis, propulsores e roupas.
 - **Progressão:** missões e patentes, com prestígio.
 - **Salvamento:** fica no navegador (`localStorage`).
-- **Fora desta versão:** conquistas e música, que existem só no projeto Unity.
+- **Música:** as mesmas 3 trilhas sintetizadas do projeto Unity (menu, corrida e Garra), mais baixas durante avisos de drone e na pausa; botão próprio para ligar e desligar.
+- **Fora desta versão:** conquistas, que existem só no projeto Unity.
 
 ## 4. O que o protótipo Unity contém
 | Área | Conteúdo |
