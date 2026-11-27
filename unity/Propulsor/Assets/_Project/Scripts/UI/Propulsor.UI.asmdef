@@ -1,0 +1,20 @@
+{
+    "name": "Propulsor.UI",
+    "rootNamespace": "Propulsor.UI",
+    "references": [
+        "Propulsor.Core",
+        "Propulsor.Data",
+        "Propulsor.Gameplay",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

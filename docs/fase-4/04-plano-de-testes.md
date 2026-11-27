@@ -1,0 +1,74 @@
+# Fase 4 · 04 — Plano e matriz de testes
+
+Tipos: **U** = unitário EditMode (C# puro) · **P** = PlayMode (Unity) · **M** = manual · **C** = comparação com a referência (vídeo).
+Status: ⏳ não executado · ✅ passou (meio de execução, data) · ❌ falhou. Execução fora do Unity = `dotnet test unity/tools/CoreTests`.
+
+| ID | Área | Caso | Tipo | Esperado | Status |
+|---|---|---|---|---|---|
+| F-01 | Física | Sem input a partir de y=3, cai e para no chão | U | y = chão, vy = 0, estado Grounded | ✅ U (dotnet, 2026-11-27) |
+| F-02 | Física | Input contínuo sobe até o teto e para | U | y = teto, vy = 0 | ✅ U (dotnet, 2026-11-27) |
+| F-03 | Física | vy nunca excede limites | U | vy ∈ [maxDown, maxUp] | ✅ U (dotnet, 2026-11-27) |
+| F-04 | Física | Velocidade horizontal cresce e satura | U | vx(t) monotônica, ≤ maxSpeed | ✅ U (dotnet, 2026-11-27) |
+| F-05 | Física | Integração independente do framerate (30/60/120 Hz) | U | diferença de posição < 1 % | ✅ U (dotnet, 2026-11-27) |
+| F-06 | Física | Tempo chão→teto comparado à referência | C | ±15 % | ⏳ |
+| M-01 | Movimento | Toques curtos permitem pairar | M | oscilação estável ±0,5 u | ⏳ |
+| C-01 | Colisão | Arco estático mata a pé | P | `PlayerDied(Arc)` | ✅ U (dotnet, 2026-11-27) |
+| C-02 | Colisão | Arco rotativo: colisor acompanha rotação | P | dano só na área do arco | ✅ U (dotnet, 2026-11-27) |
+| C-03 | Colisão | Feixe em Warning não causa dano; em Firing causa | P | | ✅ U (dotnet, 2026-11-27) |
+| C-04 | Colisão | Perigo com veículo destrói veículo, não mata | P | `VehicleDestroyed`, jogador vivo, invulnerável 1 s | ✅ U (dotnet, 2026-11-27) |
+| C-05 | Colisão | Guindaste Blindado aguenta 3 drones | P | destruído no 3º | ✅ U (dotnet, 2026-11-27) |
+| C-06 | Colisão | Coleta e dano no mesmo quadro | P | coleta contabilizada | ✅ U (dotnet, 2026-11-27) |
+| O-01 | Geração | Mesma seed ⇒ mesma sequência | U | idêntica | ✅ U (dotnet, 2026-11-27) |
+| O-02 | Geração | Sem repetição de segmento nas últimas 3 | U | | ✅ U (dotnet, 2026-11-27) |
+| O-03 | Geração | Validador: todo segmento tem caminho livre | U | 100 % | ✅ U (dotnet, 2026-11-27) |
+| O-04 | Drones | Não lançados durante feixe ativo nem na Moto-Trilho | U/P | 0 lançamentos | ✅ U (dotnet, 2026-11-27) |
+| O-05 | Drones | `t_track` decresce com distância | U | 1,4 s @0 m → 0,6 s @3000 m | ✅ U (dotnet, 2026-11-27) |
+| O-06 | Desempenho | Sem alocação GC por quadro na corrida | P | 0 B/frame após aquecimento | ✅ U lógica: 88 B em 5.000 passos após aquecimento (dotnet) · ⏳ P Profiler no Unity |
+| K-01 | Moedas | Porca coletada soma 1 à run wallet | U | | ✅ U (dotnet, 2026-11-27) |
+| K-02 | Moedas | Dobro ×2 aplica só nas porcas da corrida | U | | ✅ U (dotnet, 2026-11-27) |
+| K-03 | Moedas | Ímã atrai dentro do raio | P | | ✅ U (dotnet, 2026-11-27) |
+| V-01..08 | Veículos | Controle de cada veículo conforme doc 3·01 §3 | P/M | | ✅ U lógica (dotnet, 2026-11-27) · ⏳ M sensação no Unity |
+| N-01 | Navegação | Splash→Carregamento→Menu | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-02 | Navegação | Toque livre no menu inicia corrida | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-03 | Navegação | Pausa/continuar com contagem; perda de foco pausa | P | | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| N-04 | Navegação | Morte: revive → garra → resultados conforme inventário | P | caminhos do diagrama 3·01 §1 | ✅ U fluxo (dotnet, 2026-11-27) · ⏳ P telas no Unity |
+| L-01 | Loja | Compra com saldo suficiente | U | debita, concede, salva | ✅ U (dotnet, 2026-11-27) |
+| L-02 | Loja | Saldo insuficiente | U | `SaldoInsuficiente`, nada muda | ✅ U (dotnet, 2026-11-27) |
+| L-03 | Loja | Comprar item já possuído | U | `JaPossui` | ✅ U (dotnet, 2026-11-27) |
+| I-01 | Inventário | Equipar 3º gadget sem slot extra | U | recusado | ✅ U (dotnet, 2026-11-27) |
+| I-02 | Inventário | Consumir Segunda Chance decrementa | U | | ✅ U (dotnet, 2026-11-27) |
+| G-01 | Garra | 1 ficha = 1 tentativa; tabela por pesos (10⁵ sorteios) | U | frequências ±1 % | ✅ U (dotnet, 2026-11-27) |
+| G-02 | Garra | Troca de fichas = 100 porcas cada | U | | ✅ U (dotnet, 2026-11-27) |
+| Q-01 | Missões | Sempre 3 ativas após RunEnded | U | | ✅ U (dotnet, 2026-11-27) |
+| Q-02 | Missões | Escopo Run zera a cada corrida; Lifetime acumula | U | | ✅ U (dotnet, 2026-11-27) |
+| Q-03 | Missões | Pular custa 500 × estrelas | U | | ✅ U (dotnet, 2026-11-27) |
+| Q-04 | Patente | Estrelas suficientes ⇒ RankUp + recompensa | U | | ✅ U (dotnet, 2026-11-27) |
+| Q-05 | Patente | Nível 15 ⇒ prestígio reinicia ciclo | U | | ✅ U (dotnet, 2026-11-27) |
+| A-01 | Conquistas | Desbloqueio idempotente | U | 1 evento só | ✅ U (dotnet, 2026-11-27) |
+| S-01 | Save | Salvar/carregar ida e volta | U | igual | ✅ U (dotnet, 2026-11-27) |
+| S-02 | Save | Arquivo corrompido ⇒ usa .bak | U | | ✅ U (dotnet, 2026-11-27) |
+| S-03 | Save | Migração v0→v1 | U | | ✅ U (dotnet, 2026-11-27) |
+| R-01 | Reinício | "De novo" reseta estado de corrida e mantém progresso | P | | ✅ U (progresso mantido entre sessões, dotnet) · ⏳ P |
+| D-01 | Desempenho | 60 fps em aparelho Android médio por 10 min | M | ≥ 58 fps p95 | ⏳ |
+
+Regra do projeto: **nenhuma funcionalidade é declarada reproduzida sem o teste correspondente executado e registrado aqui.**
+
+## Casos acrescentados na Fase 9
+
+| ID | Área | Caso | Tipo | Esperado | Status |
+|---|---|---|---|---|---|
+| W-01 | Robôs | Esbarrar derruba, não mata | U | `WorkerKnocked`, viva | ✅ U (dotnet, 2026-11-27) |
+| W-02 | Robôs | Jato do propulsor derruba quem está embaixo | U | | ✅ U (dotnet, 2026-11-27) |
+| W-03 | Robôs | Voando alto não derruba | U | 0 derrubados | ✅ U (dotnet, 2026-11-27) |
+| W-04 | Robôs | Derrubado quica e assenta | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-01 | Raspão | Passar perto de arco conta 1 por arco | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-02 | Raspão | Longe do arco não conta | U | | ✅ U (dotnet, 2026-11-27) |
+| NM-03 | Raspão | Drone passando perto conta | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-01 | Áudio | Eventos tocam os efeitos certos | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-02 | Áudio | Música por estado (menu/corrida/garra) | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-03 | Áudio | Ducking −6 dB em aviso de drone, −10 dB na pausa | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-04 | Áudio | Porcas seguidas sobem de tom (máx. 1 oitava) | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-05 | Áudio | Som do propulsor segue o estado | U | | ✅ U (dotnet, 2026-11-27) |
+| AU-06 | Áudio | Síntese de todos os clipes no Unity | P | sem exceção, duração > 0 | ⏳ |
+| PF-01 | Desempenho | Passo da simulação < 200 µs | U | medido: ~4 µs | ✅ U (dotnet, 2026-11-27) |
+| PF-02 | Desempenho | Publicar evento não aloca | U | | ✅ U (dotnet, 2026-11-27) |

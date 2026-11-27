@@ -1,0 +1,16 @@
+{
+    "name": "Propulsor.Data",
+    "rootNamespace": "Propulsor.Data",
+    "references": [
+        "Propulsor.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

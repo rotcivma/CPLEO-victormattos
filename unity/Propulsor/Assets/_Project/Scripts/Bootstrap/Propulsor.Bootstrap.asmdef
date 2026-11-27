@@ -1,0 +1,19 @@
+{
+    "name": "Propulsor.Bootstrap",
+    "rootNamespace": "Propulsor.Bootstrap",
+    "references": [
+        "Propulsor.Core",
+        "Propulsor.Data",
+        "Propulsor.Gameplay",
+        "Propulsor.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,17 @@
+# Unity
+unity/Propulsor/[Ll]ibrary/
+unity/Propulsor/[Tt]emp/
+unity/Propulsor/[Oo]bj/
+unity/Propulsor/[Bb]uild/
+unity/Propulsor/[Bb]uilds/
+unity/Propulsor/[Ll]ogs/
+unity/Propulsor/[Uu]ser[Ss]ettings/
+unity/Propulsor/*.csproj
+unity/Propulsor/*.sln
+unity/Propulsor/.vs/
+unity/Propulsor/.idea/
+
+# .NET (testes fora do Unity)
+unity/tools/**/bin/
+unity/tools/**/obj/
+unity/tools/**/TestResults/
